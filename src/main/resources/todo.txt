@@ -1,0 +1,39 @@
+
+    
+
+- set a cap on max # of waypoints (ignore new waypoints and show message when right click after cap reached)
+
+- move all subscribed events to an EventHandler class
+
+- see if there's a .containsTag() method on NBTCompoundTag, so we can omit the label tag if it's null (instead of forcing it to always have a label)
+
+- if duplicate waypoint clicked, then delete
+
+- modify item data on client side for performance niceness, but also immediately send a packet to the server for each time that:
+    - a waypoint is added
+    - a waypoint is removed
+    - a waypoint is edited (send index, and updated waypoint nbt to server)
+        * no need for this one yet, until we have the gui
+    
+    ** news flash: cap(ability) data is NOT synched to clients automatically.  new plan:
+        - 1. take UUID off recorder (don't delete it, since it might be handy later?  probably not but keep anyway for now)
+        - 2. make packet handler just check the player's main hand - no need to even try to verify uuid
+            - oh yeah take uuid out of packet class too
+            
+    NEW plan: keep it simple
+        1. right click sends a message to server to add waypoint
+        2. server adds waypoint and returns confirmation message (containing the new waypoint and index to add it at)
+        3. client doesn't do anything until it gets confirmation message, at which point it adds waypoint on client, shows message
+        
+    when to send synch packet to client:
+        - on picked up by mouse
+        - on picked up in inventory
+    
+    * thoughts:
+        - base class ItemWithCapabilities
+            - the itemstack's natural ID is the player id + inventory id (armor, etc.) + slot id
+            - if itemstack at the intended "ID" slot is not the correct itemtype, then show message and give up
+        
+        
+        
+    
