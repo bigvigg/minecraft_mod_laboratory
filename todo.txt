@@ -32,8 +32,27 @@
     * thoughts:
         - base class ItemWithCapabilities
             - the itemstack's natural ID is the player id + inventory id (armor, etc.) + slot id
+                * PROBLEM: there's no way to get the inventory id, only the slot id
             - if itemstack at the intended "ID" slot is not the correct itemtype, then show message and give up
-        
+            
+            
+    - new class SynchingItem
+        - OnCreate, if !world.isRemote, get com.vigg.uuid in the server-side nbt tag
+        - OnItemStackUpdate, if world.isRemote and isDirty and (more than 5 seconds since last request), 
+          then set lastRequestTime and send RequestSynchingItemMessage(slot, stack.uuid)
+            - server returns ResponseSynchingItemMessage(slot, stack.uuid, nbtCapabilites)
+                - client updates the nbt and sets isDirty = false, lastResponseTime = now
+        - initCapabilities returns new class SynchingItemCapabilityProvider, which can be subclassed by descendants of SynchingItem
+            - SynchingItemCapabilityProvider implements new capability SynchingItemStack
+                - isDirty (default to true)
+                - lastRequestTime
+                - lastUpdateTime
+                
+     
+     - shore up the SynchingItem packets so that they take entityID as a param, in case onItemUpdate can be firing for items
+       in non-player inventories (like mob inventories)
+            
+
         
         
     

@@ -1,9 +1,9 @@
 package com.vigg.common.capabilities;
 
 import com.vigg.common.Reference;
-import com.vigg.common.capabilities.uuid.IUUIDCapability;
-import com.vigg.common.capabilities.uuid.UUIDCapability;
-import com.vigg.common.capabilities.uuid.UUIDCapabilityStorage;
+import com.vigg.common.capabilities.synchingitem.ISynchingItemCapability;
+import com.vigg.common.capabilities.synchingitem.SynchingItemCapability;
+import com.vigg.common.capabilities.synchingitem.SynchingItemCapabilityStorage;
 import com.vigg.common.capabilities.waypoints.IWaypointMemoryCapability;
 import com.vigg.common.capabilities.waypoints.WaypointMemoryCapability;
 import com.vigg.common.capabilities.waypoints.WaypointMemoryCapabilityProvider;
@@ -22,8 +22,8 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 public class ModCapabilities 
 {
 	public static final ResourceLocation WAYPOINT_CAPABILITY = new ResourceLocation(Reference.MOD_ID, "WaypointMemoryCapability");
-	public static final ResourceLocation UUID_CAPABILITY = new ResourceLocation(Reference.MOD_ID, "UUIDCapability");
-
+	public static final ResourceLocation SYNCHING_ITEM_CAPABILITY = new ResourceLocation(Reference.MOD_ID, "SynchingItemCapability");
+	
 	public ModCapabilities()
 	{
 		MinecraftForge.EVENT_BUS.register(this);
@@ -32,7 +32,7 @@ public class ModCapabilities
 	public void preInit(FMLPreInitializationEvent e) 
 	{
 		CapabilityManager.INSTANCE.register(IWaypointMemoryCapability.class, new WaypointMemoryCapabilityStorage(), WaypointMemoryCapability.class);
-		CapabilityManager.INSTANCE.register(IUUIDCapability.class, new UUIDCapabilityStorage(), UUIDCapability.class);
+		CapabilityManager.INSTANCE.register(ISynchingItemCapability.class, new SynchingItemCapabilityStorage(), SynchingItemCapability.class);
 	}
 
     public void init(FMLInitializationEvent e)

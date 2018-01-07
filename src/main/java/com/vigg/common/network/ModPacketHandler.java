@@ -12,6 +12,13 @@ public class ModPacketHandler
 	
 	public static void preInit()
 	{
-		INSTANCE.registerMessage(AddWaypointToRecorderMessage.Handler.class, AddWaypointToRecorderMessage.class, 0, Side.SERVER);
+		int nextChannelID = -1;
+		
+		//server
+		INSTANCE.registerMessage(AddWaypointToRecorderMessage.Handler.class, AddWaypointToRecorderMessage.class, nextChannelID++, Side.SERVER);
+		INSTANCE.registerMessage(RequestSynchingItemDataMessage.Handler.class, RequestSynchingItemDataMessage.class, nextChannelID++, Side.SERVER);
+		
+		//client
+		INSTANCE.registerMessage(ResponseSynchingItemDataMessage.Handler.class, ResponseSynchingItemDataMessage.class, nextChannelID++, Side.CLIENT);
 	}
 }

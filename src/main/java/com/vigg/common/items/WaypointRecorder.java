@@ -22,9 +22,23 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 
-public class WaypointRecorder extends Item 
+public class WaypointRecorder extends SynchingItem 
 {
 	public static final String NBT_KEY = "com.vigg.waypoints";
+	
+	
+	public WaypointRecorder() 
+	{
+	    super();
+
+	    String className = this.getClass().getSimpleName();
+	    
+	    this.setRegistryName(Reference.MOD_ID, className);
+	    this.setUnlocalizedName(className);
+	    this.setMaxStackSize(1);
+	    this.setCreativeTab(CreativeTabs.TOOLS);
+	}
+	
 	
 	
 	@Override
@@ -76,20 +90,6 @@ public class WaypointRecorder extends Item
 	}
 
 
-	public WaypointRecorder() 
-	{
-	    super();
-
-	    String className = this.getClass().getSimpleName();
-	    
-	    this.setRegistryName(Reference.MOD_ID, className);
-	    this.setUnlocalizedName(className);
-	    this.setMaxStackSize(1);
-	    this.setCreativeTab(CreativeTabs.TOOLS);
-	}
-	
-
-
 	@Override
 	public void onCreated(ItemStack stack, World worldIn, EntityPlayer playerIn) 
 	{
@@ -127,6 +127,8 @@ public class WaypointRecorder extends Item
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List lores, boolean b)
     {
+    	super.addInformation(stack, player, lores, b);
+    	
         if (stack.hasTagCompound() && stack.getTagCompound().hasKey(NBT_KEY))
         {
         	NBTTagList waypoints = (NBTTagList)stack.getTagCompound().getTag(NBT_KEY);
