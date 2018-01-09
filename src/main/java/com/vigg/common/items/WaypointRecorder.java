@@ -4,6 +4,9 @@ import java.util.List;
 
 import com.vigg.common.Reference;
 import com.vigg.common.Waypoint;
+import com.vigg.common.capabilities.ModCapabilityProvider;
+import com.vigg.common.capabilities.waypoints.IWaypointMemoryCapability;
+import com.vigg.common.capabilities.waypoints.WaypointMemoryCapabilityProvider;
 import com.vigg.common.network.AddWaypointToRecorderMessage;
 import com.vigg.common.network.ModPacketHandler;
 
@@ -11,9 +14,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
@@ -21,12 +23,10 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
+import net.minecraftforge.common.capabilities.ICapabilityProvider;
 
 public class WaypointRecorder extends SynchingItem 
 {
-	public static final String NBT_KEY = "com.vigg.waypoints";
-	
-	
 	public WaypointRecorder() 
 	{
 	    super();
@@ -71,7 +71,8 @@ public class WaypointRecorder extends SynchingItem
 					if (waypointRecorder != null && waypointRecorder.getItem() == ModItems.getWaypointRecorder())
 					{
 						Waypoint newWaypoint = new Waypoint(blockClicked.getX(), blockClicked.getY(), blockClicked.getZ());
-						ModPacketHandler.INSTANCE.sendToServer(new AddWaypointToRecorderMessage(newWaypoint));				
+						ModPacketHandler.INSTANCE.sendToServer(new AddWaypointToRecorderMessage(SynchingItem.getUUID(waypointRecorder), newWaypoint));				
+						System.out.println("stub sending to server");
 					}
 				}
 			}
@@ -116,25 +117,38 @@ public class WaypointRecorder extends SynchingItem
 	}
 
 
-	/*
 	@Override
 	public ICapabilityProvider initCapabilities(ItemStack stack, NBTTagCompound nbt) 
 	{
-		return super.initCapabilities(stack, nbt);
+		/*
+		MultiCapabilitiesProvider provider = new MultiCapabilitiesProvider();
+		//provider.add(super.initCapabilities(stack, nbt));
+		provider.add(new SynchingItemCapabilityProvider());
+		provider.add(new WaypointMemoryCapabilityProvider());
+		
+		if (nbt != null)
+			provider.deserializeNBT(nbt);
+		
+		return provider;
+		*/
+		
+		
+		ModCapabilityProvider provider = new ModCapabilityProvider();
+		
+		if (nbt != null)
+			provider.deserializeNBT(nbt);
+			
+		return provider;
+		
 	}
-	*/
  
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List lores, boolean b)
     {
     	super.addInformation(stack, player, lores, b);
     	
-        if (stack.hasTagCompound() && stack.getTagCompound().hasKey(NBT_KEY))
-        {
-        	NBTTagList waypoints = (NBTTagList)stack.getTagCompound().getTag(NBT_KEY);
-        			
-            lores.add(Integer.toString(waypoints.tagCount()) + " waypoints");
-        }
+    	IWaypointMemoryCapability waypointCap = stack.getCapability(WaypointMemoryCapabilityProvider.WAYPOINT_CAPABILITY, null);    	
+    	lores.add(Integer.toString(waypointCap.getWaypoints().size()) + " waypoints");
     }
     
 	

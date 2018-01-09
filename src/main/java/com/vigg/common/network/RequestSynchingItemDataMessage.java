@@ -19,7 +19,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 // NOTE: this message only goes one way, from client to server.
 public class RequestSynchingItemDataMessage implements IMessage 
 {
-	private int itemSlot = -1;
+	private int itemSlot = 0;
 	private UUID itemUUID = null;
 
     // default constructor required
@@ -36,14 +36,14 @@ public class RequestSynchingItemDataMessage implements IMessage
     @Override
     public void fromBytes(ByteBuf buf) 
     {
-    	itemSlot = ByteBufUtils.readVarInt(buf, 2);
+    	itemSlot = ByteBufUtils.readVarShort(buf);
     	itemUUID = UUID.fromString(ByteBufUtils.readUTF8String(buf));
     }
 
     @Override
     public void toBytes(ByteBuf buf) 
     {	
-		ByteBufUtils.writeVarInt(buf, itemSlot, 2);
+		ByteBufUtils.writeVarShort(buf, itemSlot);
 		ByteBufUtils.writeUTF8String(buf, itemUUID.toString());
     }
 
@@ -52,6 +52,8 @@ public class RequestSynchingItemDataMessage implements IMessage
         @Override
         public IMessage onMessage(final RequestSynchingItemDataMessage message, MessageContext ctx) 
         {
+        	System.out.println("stub server received client request");
+        	
         	// sanity check
         	if (ctx.side.isClient() || message.itemUUID == null || message.itemSlot < 0)
         		return null;
@@ -74,7 +76,7 @@ public class RequestSynchingItemDataMessage implements IMessage
         					{
 	        					ItemStack itemToCheck = (ItemStack)inventoriesToSearch[i].get(message.itemSlot);
 	        					
-	            				if (itemToCheck != null && SynchingItem.getUUID(itemToCheck) == message.itemUUID && itemToCheck.hasCapability(SynchingItemCapabilityProvider.SYNCHING_ITEM_CAPABILITY, null))
+	            				if (itemToCheck != null && SynchingItem.getUUID(itemToCheck).equals(message.itemUUID) && itemToCheck.hasCapability(SynchingItemCapabilityProvider.SYNCHING_ITEM_CAPABILITY, null))
 	            				{
 	            					requestedItem = itemToCheck;
 	            					break;
@@ -92,6 +94,7 @@ public class RequestSynchingItemDataMessage implements IMessage
         					synchCap.setLastResponseTime(currentTime);
         					
         					ModPacketHandler.INSTANCE.sendTo(new ResponseSynchingItemDataMessage(message.itemSlot, message.itemUUID, requestedItem.serializeNBT()), player);
+        					System.out.println("stub server sending update to client " + requestedItem.serializeNBT());
         				}
 				    }
 				}

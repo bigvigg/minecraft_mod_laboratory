@@ -70,6 +70,8 @@ public class SynchingItem extends Item
 		{
 			// client side
 			
+			System.out.println("stub client onUpdate START NBT " + stack.serializeNBT());
+			
 			// note: it takes a moment for the server to automatically send us the stack's uuid when the stack is first created,
 			// so we have to check and make sure that's already happened before proceeding
 			if (itemUUID != null)
@@ -86,6 +88,7 @@ public class SynchingItem extends Item
 					{
 						// ask the server to send us the latest nbt data for this ItemStack
 						ModPacketHandler.INSTANCE.sendToServer(new RequestSynchingItemDataMessage(itemSlot, itemUUID));
+						System.out.println("stub client requesting synch");
 						synchCap.setLastRequestTime(currentTime);
 					}
 				}
@@ -113,7 +116,6 @@ public class SynchingItem extends Item
 					nbt = new NBTTagCompound();
 				nbt.setString(NBT_UUID_KEY, UUID.randomUUID().toString());
 				stack.setTagCompound(nbt);
-				
 				
 				// make sure that isDirty is false on the server side when the ItemStack is instantiated
 				synchCap.setIsDirty(false);

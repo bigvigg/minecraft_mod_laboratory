@@ -1,0 +1,29 @@
+
+    
+
+- set a cap on max # of waypoints (ignore new waypoints and show message when right click after cap reached)
+
+- move all subscribed events to an EventHandler class
+
+- see if there's a .containsTag() method on NBTCompoundTag, so we can omit the label tag if it's null (instead of forcing it to always have a label)
+
+- if duplicate waypoint clicked, then delete
+
+
+Item.getNBTShareTag()
+    - called every time the server automatically synchs an ItemStack to a client.  override in Item classes to modify
+      the tag nbt (NOT the overall ItemStack nbt) sent to the client for each ItemStack, in case you want to strip out certain tags to effectively make them
+      server-side only, or to add tags for display purposes on the client.
+    - references
+        - https://github.com/MinecraftForge/MinecraftForge/pull/3342
+        - https://github.com/MinecraftForge/MinecraftForge/pull/3342/files
+        - https://github.com/MinecraftForge/MinecraftForge/pull/3283
+        - http://www.minecraftforge.net/forum/topic/51165-itemstack-capabilities-behaving-oddly-when-playing-on-server/
+        - http://www.minecraftforge.net/forum/topic/54977-1112-best-way-to-sync-itemstack-capabilities-to-client/
+    
+
+            
+
+        
+        
+    

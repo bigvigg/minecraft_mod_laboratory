@@ -19,6 +19,7 @@ public class ModPacketHandler
 		INSTANCE.registerMessage(RequestSynchingItemDataMessage.Handler.class, RequestSynchingItemDataMessage.class, nextChannelID++, Side.SERVER);
 		
 		//client
+		INSTANCE.registerMessage(AddWaypointToRecorderMessage.Handler.class, AddWaypointToRecorderMessage.class, nextChannelID++, Side.CLIENT);
 		INSTANCE.registerMessage(ResponseSynchingItemDataMessage.Handler.class, ResponseSynchingItemDataMessage.class, nextChannelID++, Side.CLIENT);
 	}
 }

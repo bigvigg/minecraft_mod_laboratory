@@ -48,7 +48,7 @@ public class ResponseSynchingItemDataMessage implements IMessage
     {	
 		ByteBufUtils.writeVarInt(buf, itemSlot, 2);
 		ByteBufUtils.writeUTF8String(buf, itemUUID.toString());
-		ByteBufUtils.writeTag(buf,  nbt);
+		ByteBufUtils.writeTag(buf, nbt);
     }
 
     public static class Handler implements IMessageHandler<ResponseSynchingItemDataMessage, IMessage> 
@@ -56,6 +56,8 @@ public class ResponseSynchingItemDataMessage implements IMessage
         @Override
         public IMessage onMessage(final ResponseSynchingItemDataMessage message, MessageContext ctx) 
         {
+        	System.out.println("stub received synch response, nbt " + message.nbt);
+        	
         	// sanity check
         	if ((!ctx.side.isClient()) || message.itemUUID == null || message.itemSlot < 0)
         		return null;
@@ -78,7 +80,7 @@ public class ResponseSynchingItemDataMessage implements IMessage
         					{
 	        					ItemStack itemToCheck = (ItemStack)inventoriesToSearch[i].get(message.itemSlot);
 	        					
-	            				if (itemToCheck != null && SynchingItem.getUUID(itemToCheck) == message.itemUUID && itemToCheck.hasCapability(SynchingItemCapabilityProvider.SYNCHING_ITEM_CAPABILITY, null))
+	            				if (itemToCheck != null && SynchingItem.getUUID(itemToCheck).equals(message.itemUUID) && itemToCheck.hasCapability(SynchingItemCapabilityProvider.SYNCHING_ITEM_CAPABILITY, null))
 	            				{
 	            					itemToUpdate = itemToCheck;
 	            					break;
@@ -88,20 +90,21 @@ public class ResponseSynchingItemDataMessage implements IMessage
         				
         				if (itemToUpdate != null)
         				{
-        					ISynchingItemCapability synchCap = itemToUpdate.getCapability(SynchingItemCapabilityProvider.SYNCHING_ITEM_CAPABILITY, null);
-        					
         					// preserve lastRequestTime before it gets overwritten by deserializeNBT below
+        					ISynchingItemCapability synchCap = itemToUpdate.getCapability(SynchingItemCapabilityProvider.SYNCHING_ITEM_CAPABILITY, null);
         					long lastRequestTime = synchCap.lastRequestTime();
         					
         					// calling deserializeNBT overwrites EVERYTHING from the server, so call it first and THEN make our synchCap changes below
         					itemToUpdate.deserializeNBT(message.nbt);
         					
         					// NOW we can update capabilities on the client without them being overwritten
+        					// STUB - do I need to do this?  recreate synchCap after doing deserializeNBT?  probably not - come back and test this
+        					synchCap = itemToUpdate.getCapability(SynchingItemCapabilityProvider.SYNCHING_ITEM_CAPABILITY, null);
         					synchCap.setIsDirty(false);
         					synchCap.setLastRequestTime(lastRequestTime);
         					synchCap.setLastResponseTime(System.currentTimeMillis());
         					
-        					System.out.println("stub - client processed packet");
+        					System.out.println("stub client applied synch data, FINAL NBT " + itemToUpdate.serializeNBT());
         				}
 				    }
 				}
