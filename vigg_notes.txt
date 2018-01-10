@@ -22,6 +22,12 @@ Item.getNBTShareTag()
         - http://www.minecraftforge.net/forum/topic/54977-1112-best-way-to-sync-itemstack-capabilities-to-client/
     
 
+- next to do:
+    - extend TileEntityBeacon
+        - to add additional reference to player who placed it
+        - to hook into onTick and self-destruct if player not found, or player not holding waypoint recorder
+            ** also, add UUID back to WaypointRecorder item, and store recorderUUID in this new TileEntity class.
+               use in onTick check to also destroy waypoint if a *different* recorder is equipped
             
 
         

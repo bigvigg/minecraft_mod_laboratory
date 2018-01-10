@@ -1,6 +1,6 @@
 package com.vigg.common;
 
-import com.vigg.common.items.WaypointRecorder;
+import com.vigg.common.waypoints.WaypointRecorder;
 
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;

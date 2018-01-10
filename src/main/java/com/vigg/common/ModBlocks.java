@@ -1,7 +1,8 @@
-package com.vigg.common.items;
+package com.vigg.common;
+
+import com.vigg.common.waypoints.BlockWaypoint;
 
 import net.minecraft.block.Block;
-import net.minecraft.item.Item;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -9,11 +10,15 @@ import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-public class ModItems 
+public class ModBlocks 
 {
-	private static WaypointRecorder waypointRecorder;
+	private static BlockWaypoint blockWaypoint;
+	public static BlockWaypoint getBlockWaypoint()
+	{
+		return blockWaypoint;
+	}
 	
-	public ModItems()
+	public ModBlocks()
 	{
 		MinecraftForge.EVENT_BUS.register(this);
 	}
@@ -33,19 +38,9 @@ public class ModItems
     @SubscribeEvent
     public void registerBlocks(RegistryEvent.Register<Block> event) 
     {
-        //event.getRegistry().registerAll(block1, block2, ...);
-    }
-    
-    @SubscribeEvent
-    public void registerItems(RegistryEvent.Register<Item> event) 
-    {
-    	waypointRecorder = new WaypointRecorder();
+    	blockWaypoint = new BlockWaypoint();
     	
-        event.getRegistry().registerAll(waypointRecorder /*, ...more items. */);
+        event.getRegistry().registerAll(blockWaypoint/*, block2, ...*/);
     }
     
-    public static WaypointRecorder getWaypointRecorder()
-    {
-    	return waypointRecorder;
-    }
 }
