@@ -9,6 +9,7 @@ import com.vigg.common.Reference;
 import com.vigg.common.Waypoint;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -118,27 +119,27 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 		if (!worldIn.isRemote)
 			ensureUUID(stack);
 	}
-
+    
     @Override
-    public void addInformation(ItemStack stack, EntityPlayer player, List lores, boolean b)
+	public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) 
     {
-    	super.addInformation(stack, player, lores, b);
-    	
-    	if (Reference.DEBUG)
+		super.addInformation(stack, worldIn, tooltip, flagIn);
+
+		if (Reference.DEBUG)
     	{
     		UUID stackID = getUUID(stack);
     		if (stackID == null)
-    			lores.add("uuid: null");
+    			tooltip.add("uuid: null");
     		else
-    			lores.add("uuid: " + stackID.toString());
-    		
-    		//lores.add("uuid: " + stackID == null ? "null" : stackID.toString());
+    			tooltip.add("uuid: " + stackID.toString());
     	}
     	
-    	lores.add(this.getWaypointCount(stack) + " waypoints");
-    }
-    
-    @Override
+		tooltip.add(this.getWaypointCount(stack) + " waypoints");
+	}
+
+
+
+	@Override
     public Waypoint[] getWaypoints(ItemStack container)
     {
     	if (container.hasTagCompound())

@@ -63,7 +63,7 @@ public class AddWaypointToRecorderMessage implements IMessage
 
         	// server side
     		
-    		final EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+    		final EntityPlayerMP player = ctx.getServerHandler().player;
             player.getServerWorld().addScheduledTask(
         		new Runnable()
 				{
