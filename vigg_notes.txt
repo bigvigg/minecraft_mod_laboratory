@@ -28,6 +28,15 @@ Item.getNBTShareTag()
         - to hook into onTick and self-destruct if player not found, or player not holding waypoint recorder
             ** also, add UUID back to WaypointRecorder item, and store recorderUUID in this new TileEntity class.
                use in onTick check to also destroy waypoint if a *different* recorder is equipped
+    
+    - add property to Waypoint to track what world it's in
+        + add validation to server to make sure all waypoints are in same world when adding a new waypoint
+        
+    - extend distance of ray trace to be waaaaay further
+    
+    - make code so that waypoints don't spawn on top of non-solid blocks
+    
+    
             
 
         

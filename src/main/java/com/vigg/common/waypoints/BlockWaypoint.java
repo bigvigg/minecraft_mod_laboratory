@@ -1,21 +1,19 @@
 package com.vigg.common.waypoints;
 
-import net.minecraft.block.Block;
+import javax.annotation.Nullable;
+
 import net.minecraft.block.BlockContainer;
-import net.minecraft.block.material.MapColor;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
-import net.minecraft.stats.StatList;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityBeacon;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumBlockRenderType;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
@@ -25,12 +23,15 @@ public class BlockWaypoint extends BlockContainer
 {
 	public BlockWaypoint()
     {
-        super(Material.AIR, MapColor.AIR);
+		super(Material.AIR);
         
         String className = this.getClass().getSimpleName();
         
         this.setUnlocalizedName(className);
         this.setRegistryName(className);
+        this.setLightLevel(1f);
+        
+        this.setCreativeTab(CreativeTabs.TOOLS); // STUB remove this after testing
     }
 
 	/**
@@ -39,7 +40,15 @@ public class BlockWaypoint extends BlockContainer
 	@Override
     public TileEntity createNewTileEntity(World worldIn, int meta)
     {
-        return new TileEntityBeacon();
+        return new TileEntityWaypoint();
+    }
+	
+	
+	@Override
+	@Nullable
+    public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, IBlockAccess worldIn, BlockPos pos)
+    {
+        return NULL_AABB;
     }
 
     /**
@@ -50,6 +59,7 @@ public class BlockWaypoint extends BlockContainer
     {
         return false;
     }
+	
 	@Override
     public boolean isFullCube(IBlockState state)
     {
@@ -74,20 +84,12 @@ public class BlockWaypoint extends BlockContainer
     {
         super.onBlockPlacedBy(worldIn, pos, state, placer, stack);
 
-        // STUB - set block name.  is this called when block placed programatically?
-        
-        
-        /*
-        if (stack.hasDisplayName())
+        // make the beacon start rendering
+        TileEntity tileentity = worldIn.getTileEntity(pos);
+        if (tileentity instanceof TileEntityWaypoint)
         {
-            TileEntity tileentity = worldIn.getTileEntity(pos);
-
-            if (tileentity instanceof TileEntityBeacon)
-            {
-                ((TileEntityBeacon)tileentity).setName(stack.getDisplayName());
-            }
+            ((TileEntityWaypoint)tileentity).updateBeacon();
         }
-        */
     }
 	
     @SideOnly(Side.CLIENT)

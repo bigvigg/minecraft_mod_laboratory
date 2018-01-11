@@ -1,8 +1,11 @@
 package com.vigg.common;
 
 import com.vigg.common.waypoints.BlockWaypoint;
+import com.vigg.common.waypoints.WaypointRecorder;
 
 import net.minecraft.block.Block;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -17,6 +20,7 @@ public class ModBlocks
 	{
 		return blockWaypoint;
 	}
+	
 	
 	public ModBlocks()
 	{
@@ -41,6 +45,15 @@ public class ModBlocks
     	blockWaypoint = new BlockWaypoint();
     	
         event.getRegistry().registerAll(blockWaypoint/*, block2, ...*/);
+    }
+    
+    @SubscribeEvent
+    public void registerItems(RegistryEvent.Register<Item> event) 
+    {
+    	ItemBlock itemBlockWaypoint = new ItemBlock(blockWaypoint);
+    	itemBlockWaypoint.setRegistryName(blockWaypoint.getRegistryName());
+    	
+        event.getRegistry().registerAll(itemBlockWaypoint /*, ...more. */);
     }
     
 }

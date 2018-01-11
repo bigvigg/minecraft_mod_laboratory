@@ -3,11 +3,13 @@ package com.vigg.common.waypoints;
 import java.util.List;
 import java.util.UUID;
 
+import com.vigg.common.ModBlocks;
 import com.vigg.common.ModItems;
 import com.vigg.common.ModPacketHandler;
 import com.vigg.common.Reference;
 import com.vigg.common.Waypoint;
 
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
@@ -17,6 +19,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
@@ -25,8 +28,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack>
 {
@@ -116,8 +117,41 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 	public void onUpdate(ItemStack stack, World worldIn, Entity entityIn, int itemSlot, boolean isSelected) {
 		super.onUpdate(stack, worldIn, entityIn, itemSlot, isSelected);
 		
-		if (!worldIn.isRemote)
+		if (worldIn.isRemote)
+		{
+			// client side
+			
+			Waypoint[] waypoints = getWaypoints(stack);
+			
+			// Make sure the beacon block is spawned for each current waypoint.
+			// Since these waypoint blocks are 100% just-for-looks and do not interact with anything in the world,
+			// I'm gonna go against common wisdom and create them *only* on the client side.
+			for (int i = 0; i < waypoints.length; i++)
+			{
+				Waypoint wp = waypoints[i];
+				BlockPos pos = new BlockPos(wp.x, wp.y, wp.z);
+				IBlockState waypointState = ModBlocks.getBlockWaypoint().getDefaultState();
+				
+				IBlockState currentState = worldIn.getBlockState(pos);
+				if (currentState != waypointState)
+				{
+					System.out.println("STUB setting waypoint blockstate at " + pos.toString());
+					worldIn.setBlockState(pos,  waypointState);
+					
+					TileEntity te = worldIn.getTileEntity(pos);
+					if (te instanceof TileEntityWaypoint)
+					{
+						((TileEntityWaypoint)te).updateBeacon();
+					}
+				}
+			}
+		}
+		else
+		{
+			// server side
+			
 			ensureUUID(stack);
+		}
 	}
     
     @Override

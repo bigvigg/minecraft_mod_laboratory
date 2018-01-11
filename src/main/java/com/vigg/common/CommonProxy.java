@@ -7,19 +7,22 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 public class CommonProxy {
 	
 	private ModBlocks modBlocks;
+	private ModTileEntities modTileEntities;
 	private ModItems modItems;
 	//private ModCapabilities modCapabilities;
 	
 	public CommonProxy()
 	{
 		modBlocks = new ModBlocks();
+		modTileEntities = new ModTileEntities();
 		modItems = new ModItems();
 		//modCapabilities = new ModCapabilities();
 	}
 
     public void preInit(FMLPreInitializationEvent e) 
     {
-    	modBlocks.preInit(e);;
+    	modBlocks.preInit(e);
+    	modTileEntities.preInit(e);
     	modItems.preInit(e);
     	//modCapabilities.preInit(e);
     	ModPacketHandler.preInit();
@@ -28,6 +31,7 @@ public class CommonProxy {
     public void init(FMLInitializationEvent e) 
     {
     	modBlocks.init(e);
+    	modTileEntities.init(e);
     	modItems.init(e);
     	//modCapabilities.init(e);
     }
@@ -37,5 +41,6 @@ public class CommonProxy {
     	modBlocks.postInit(e);;
     	modItems.postInit(e);
     	//modCapabilities.postInit(e);
+    	modTileEntities.postInit(e);
     }
 }

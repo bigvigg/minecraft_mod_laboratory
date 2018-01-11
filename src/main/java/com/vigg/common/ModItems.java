@@ -33,12 +33,6 @@ public class ModItems
     }
     
     @SubscribeEvent
-    public void registerBlocks(RegistryEvent.Register<Block> event) 
-    {
-        //event.getRegistry().registerAll(block1, block2, ...);
-    }
-    
-    @SubscribeEvent
     public void registerItems(RegistryEvent.Register<Item> event) 
     {
     	waypointRecorder = new WaypointRecorder();
