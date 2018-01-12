@@ -2,8 +2,8 @@ package com.vigg.client;
 
 import com.vigg.common.CommonProxy;
 import com.vigg.common.Reference;
-import com.vigg.common.TileEntityWaypointRenderer;
 import com.vigg.common.waypoints.TileEntityWaypoint;
+import com.vigg.common.waypoints.TileEntityWaypointRenderer;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;

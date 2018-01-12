@@ -66,19 +66,57 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 		{
 			Minecraft mc = Minecraft.getMinecraft();
 			
-			RayTraceResult objectClicked = mc.objectMouseOver;
-			if (objectClicked != null)
+			RayTraceResult objectClicked = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(100, 1.0F);
+			
+			if (objectClicked != null/* && objectClicked.sideHit == EnumFacing.UP*/)
 			{
-				BlockPos blockClicked = objectClicked.getBlockPos();
-				if (blockClicked != null && blockClicked.getY() <= playerIn.getPosition().getY())
+				BlockPos posClicked = objectClicked.getBlockPos();
+				
+				// try a few different spots, and put the waypoint on the first one that meets the conditions
+				BlockPos[] possibleWaypointPositions = new BlockPos[] {
+						posClicked,					// first try to place at the actual position clicked (example: player clicks on tall grass)
+						posClicked.add(0, 1, 0)		// then try to place above the clicked position (example: player clicks on the ground)
+				};
+				for (BlockPos possiblePos : possibleWaypointPositions)
 				{
-					ItemStack waypointRecorder = playerIn.getHeldItem(handIn);
-					if (waypointRecorder != null && waypointRecorder.getItem() == ModItems.getWaypointRecorder())
+					// don't place waypoints very far above the player, because that's probably an accident and doesn't make sense
+					if (possiblePos != null && possiblePos.getY() <= (playerIn.getPosition().getY() + 1) && possiblePos.getY() > 0)
 					{
-						Waypoint newWaypoint = new Waypoint(blockClicked.getX(), blockClicked.getY(), blockClicked.getZ());
-						ModPacketHandler.INSTANCE.sendToServer(new AddWaypointToRecorderMessage(newWaypoint));
+						// don't place waypoints inside of solid blocks
+						IBlockState possiblePosState = worldIn.getBlockState(possiblePos);
+						if (possiblePosState != null && possiblePosState.getMaterial() != null && !possiblePosState.getMaterial().isSolid())
+						{
+							// only place waypoints on top of solid blocks
+							IBlockState blockBelow = worldIn.getBlockState(possiblePos.add(0, -1, 0));
+							if (blockBelow != null && blockBelow.getMaterial() != null && blockBelow.getMaterial().isSolid())
+							{
+								ItemStack waypointRecorder = playerIn.getHeldItem(handIn);
+								if (waypointRecorder != null && waypointRecorder.getItem() == ModItems.getWaypointRecorder())
+								{
+									Waypoint newWaypoint = new Waypoint(possiblePos.getX(), possiblePos.getY(), possiblePos.getZ());
+									ModPacketHandler.INSTANCE.sendToServer(new AddWaypointToRecorderMessage(newWaypoint));
+								}
+							}
+							else
+							{
+								//stub
+								System.out.println("STUB blockBelow " + blockBelow);
+							}
+						}
+						else
+						{
+							//stub
+							System.out.println("STUB possiblePosState " + possiblePosState);
+						}
+					}
+					else
+					{
+						//stub
+						System.out.println("STUB possiblePos " + possiblePos);
 					}
 				}
+				
+				
 			}
 		}
 		
@@ -136,8 +174,9 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 				if (currentState != waypointState)
 				{
 					System.out.println("STUB setting waypoint blockstate at " + pos.toString());
-					worldIn.setBlockState(pos,  waypointState);
+					worldIn.setBlockState(pos, waypointState);
 					
+					// make the beacon start rendering
 					TileEntity te = worldIn.getTileEntity(pos);
 					if (te instanceof TileEntityWaypoint)
 					{

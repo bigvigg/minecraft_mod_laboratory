@@ -1,4 +1,4 @@
-package com.vigg.common;
+package com.vigg.common.waypoints;
 
 import net.minecraft.client.renderer.tileentity.TileEntityBeaconRenderer;
 import net.minecraftforge.fml.relauncher.Side;
