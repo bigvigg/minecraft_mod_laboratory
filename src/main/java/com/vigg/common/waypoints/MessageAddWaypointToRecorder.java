@@ -1,6 +1,6 @@
 package com.vigg.common.waypoints;
 
-import java.util.List;
+import java.util.UUID;
 
 import com.vigg.common.ModItems;
 
@@ -15,30 +15,24 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 // sent from client to server when player right clicks on the ground to add a new waypoint
 public class MessageAddWaypointToRecorder implements IMessage 
 {
-	private int index = 0; // only used when sending from server to client
-    private Waypoint waypoint;
+	private UUID recorderUUID = null;
+    private Waypoint waypoint = null;
 
     // default constructor required
     public MessageAddWaypointToRecorder() 
     {
     }
 
-    public MessageAddWaypointToRecorder(int parIndex, Waypoint parWaypoint) 
+    public MessageAddWaypointToRecorder(UUID parRecorderUUID, Waypoint parWaypoint) 
     {
-    	index = parIndex;
-     	waypoint = parWaypoint;
-    }
-    
-    // this constructor without the index is here for convenience of the client, which doesn't send an index to the server
-    public MessageAddWaypointToRecorder(Waypoint parWaypoint) 
-    {
+    	recorderUUID = parRecorderUUID;
      	waypoint = parWaypoint;
     }
 
     @Override
     public void fromBytes(ByteBuf buf) 
     {
-    	index = ByteBufUtils.readVarShort(buf);
+    	recorderUUID = UUID.fromString(ByteBufUtils.readUTF8String(buf));
 
     	waypoint = new Waypoint();
 		waypoint.deserializeNBT(ByteBufUtils.readTag(buf));
@@ -47,7 +41,7 @@ public class MessageAddWaypointToRecorder implements IMessage
     @Override
     public void toBytes(ByteBuf buf) 
     {	
-    	ByteBufUtils.writeVarShort(buf, index);
+    	ByteBufUtils.writeUTF8String(buf, recorderUUID.toString());
 		ByteBufUtils.writeTag(buf, waypoint.serializeNBT());
     }
 
@@ -57,7 +51,7 @@ public class MessageAddWaypointToRecorder implements IMessage
         public IMessage onMessage(final MessageAddWaypointToRecorder message, MessageContext ctx) 
         {
         	// sanity check
-        	if (message.waypoint == null || ctx.side.isClient())
+        	if (message.waypoint == null || message.recorderUUID == null || ctx.side.isClient())
         		return null;
 
         	// server side
@@ -70,10 +64,11 @@ public class MessageAddWaypointToRecorder implements IMessage
         			public void run() 
 				    {
         				ItemStack heldItem = player.getHeldItemMainhand();
-				    	 
-				    	if (heldItem != null && heldItem.getItem() == ModItems.getWaypointRecorder())
+        				ItemWaypointRecorder itemWaypointRecorder = ModItems.getWaypointRecorder();
+        				
+				    	if (heldItem != null && heldItem.getItem() == itemWaypointRecorder && message.recorderUUID.equals(itemWaypointRecorder.getUUID(heldItem)))
 				    	{
-				    		ModItems.getWaypointRecorder().addWaypoint(heldItem, message.waypoint);
+				    		itemWaypointRecorder.addWaypoint(heldItem, message.waypoint);
 				    	}
 				    }
 				}

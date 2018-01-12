@@ -89,11 +89,12 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 							IBlockState blockBelow = worldIn.getBlockState(possiblePos.add(0, -1, 0));
 							if (blockBelow != null && blockBelow.getMaterial() != null && blockBelow.getMaterial().isSolid())
 							{
+								ItemWaypointRecorder itemWaypointRecorder = ModItems.getWaypointRecorder();
 								ItemStack heldItem = playerIn.getHeldItem(handIn);
-								if (heldItem != null && heldItem.getItem() == ModItems.getWaypointRecorder())
+								if (heldItem != null && heldItem.getItem() == itemWaypointRecorder)
 								{
 									Waypoint newWaypoint = new Waypoint(possiblePos.getX(), possiblePos.getY(), possiblePos.getZ());
-									ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(newWaypoint));
+									ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(itemWaypointRecorder.getUUID(heldItem), newWaypoint));
 								}
 							}
 						}
