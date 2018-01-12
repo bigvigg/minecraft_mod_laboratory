@@ -70,7 +70,7 @@ public class TileEntityWaypoint extends TileEntityBeacon
 				selfDestruct();
 			else
 			{
-				WaypointRecorder recorder = ModItems.getWaypointRecorder();
+				ItemWaypointRecorder recorder = ModItems.getWaypointRecorder();
 
 				if (heldItem.getItem() != recorder || !recorderUUID.equals(recorder.getUUID(heldItem)) || !recorder.containsWaypoint(heldItem, pos.getX(), pos.getY(), pos.getZ()))
 					selfDestruct();

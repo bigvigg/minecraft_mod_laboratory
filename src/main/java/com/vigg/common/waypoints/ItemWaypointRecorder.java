@@ -28,12 +28,12 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 
-public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack>
+public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemStack>
 {
 	public final static String ITEMSTACK_UUID_TAG_KEY = "com.vigg.uuid";
 	public final static String ITEMSTACK_WAYPOINTS_TAG_KEY = "com.vigg.waypoints";
 		
-	public WaypointRecorder() 
+	public ItemWaypointRecorder() 
 	{
 	    super();
 
@@ -89,8 +89,8 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 							IBlockState blockBelow = worldIn.getBlockState(possiblePos.add(0, -1, 0));
 							if (blockBelow != null && blockBelow.getMaterial() != null && blockBelow.getMaterial().isSolid())
 							{
-								ItemStack waypointRecorder = playerIn.getHeldItem(handIn);
-								if (waypointRecorder != null && waypointRecorder.getItem() == ModItems.getWaypointRecorder())
+								ItemStack heldItem = playerIn.getHeldItem(handIn);
+								if (heldItem != null && heldItem.getItem() == ModItems.getWaypointRecorder())
 								{
 									Waypoint newWaypoint = new Waypoint(possiblePos.getX(), possiblePos.getY(), possiblePos.getZ());
 									ModPacketHandler.INSTANCE.sendToServer(new AddWaypointToRecorderMessage(newWaypoint));

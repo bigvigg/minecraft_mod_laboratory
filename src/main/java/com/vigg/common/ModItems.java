@@ -1,6 +1,6 @@
 package com.vigg.common;
 
-import com.vigg.common.waypoints.WaypointRecorder;
+import com.vigg.common.waypoints.ItemWaypointRecorder;
 
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
@@ -13,7 +13,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
 public class ModItems 
 {
-	private static WaypointRecorder waypointRecorder;
+	private static ItemWaypointRecorder waypointRecorder;
 	
 	public ModItems()
 	{
@@ -35,12 +35,12 @@ public class ModItems
     @SubscribeEvent
     public void registerItems(RegistryEvent.Register<Item> event) 
     {
-    	waypointRecorder = new WaypointRecorder();
+    	waypointRecorder = new ItemWaypointRecorder();
     	
         event.getRegistry().registerAll(waypointRecorder /*, ...more items. */);
     }
     
-    public static WaypointRecorder getWaypointRecorder()
+    public static ItemWaypointRecorder getWaypointRecorder()
     {
     	return waypointRecorder;
     }
