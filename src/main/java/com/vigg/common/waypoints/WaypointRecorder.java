@@ -7,7 +7,6 @@ import com.vigg.common.ModBlocks;
 import com.vigg.common.ModItems;
 import com.vigg.common.ModPacketHandler;
 import com.vigg.common.Reference;
-import com.vigg.common.Waypoint;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;

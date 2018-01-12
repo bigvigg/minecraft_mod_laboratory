@@ -2,8 +2,6 @@ package com.vigg.common.waypoints;
 
 import java.util.List;
 
-import com.vigg.common.Waypoint;
-
 // T is the type of the object that IWaypointStorage is implemented on
 public interface IWaypointStorage<T> 
 {

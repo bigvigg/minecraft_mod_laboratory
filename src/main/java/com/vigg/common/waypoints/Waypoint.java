@@ -1,4 +1,4 @@
-package com.vigg.common;
+package com.vigg.common.waypoints;
 
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.common.util.INBTSerializable;

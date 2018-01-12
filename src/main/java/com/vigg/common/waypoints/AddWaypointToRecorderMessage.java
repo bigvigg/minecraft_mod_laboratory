@@ -3,7 +3,6 @@ package com.vigg.common.waypoints;
 import java.util.List;
 
 import com.vigg.common.ModItems;
-import com.vigg.common.Waypoint;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayerMP;
