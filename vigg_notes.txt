@@ -18,12 +18,10 @@ Item.getNBTShareTag()
     - add property to Waypoint to track what world it's in
         + add validation to server to make sure all waypoints are in same world when adding a new waypoint
         
-
     - set a cap on max # of waypoints (ignore new waypoints and show message when right click after cap reached)    
 
-    - see if there's a .containsTag() method on NBTCompoundTag, so we can omit the label tag if it's null (instead of forcing it to always have a label)
-
     - if duplicate waypoint clicked, then delete
+    
             
         
     

@@ -7,18 +7,20 @@ public class Waypoint implements INBTSerializable<NBTTagCompound> {
 
 	public int x, y, z;
 	
+	
 	private String label = null;
 	public String getLabel()
 	{
-		if (label == null || label.trim() == "")
+		if (label == null)
 			return "[" + Integer.toString(x) + "x " + Integer.toString(y) + "y " + Integer.toString(z) + "z]";
 		else
-			return label.trim();
+			return label;
 	}
 	public void setLabel(String newLabel)
 	{
 		this.label = newLabel;
 	}
+	
 	
 	public Waypoint()
 	{
@@ -45,7 +47,10 @@ public class Waypoint implements INBTSerializable<NBTTagCompound> {
 		tag.setInteger("x", this.x);
 		tag.setInteger("y", this.y);
 		tag.setInteger("z", this.z);
-		tag.setString("label", this.getLabel());
+		
+		if (this.label != null)
+			tag.setString("label", this.label);
+		
 		return tag;
 	}
 	
@@ -55,7 +60,9 @@ public class Waypoint implements INBTSerializable<NBTTagCompound> {
 		this.x = nbt.getInteger("x");
 		this.y = nbt.getInteger("y");
 		this.z = nbt.getInteger("z");
-		this.setLabel(nbt.getString("label"));
+		
+		if (nbt.hasKey("label"))
+			this.setLabel(nbt.getString("label"));
 	}
 	
 }

@@ -31,12 +31,9 @@ public class BlockWaypoint extends BlockContainer
         this.setRegistryName(className);
         this.setLightLevel(1f);
         
-        this.setCreativeTab(CreativeTabs.TOOLS); // STUB remove this after testing
+        //this.setCreativeTab(CreativeTabs.TOOLS);
     }
 
-	/**
-     * Returns a new instance of a block's tile entity class. Called on placing the block.
-     */
 	@Override
     public TileEntity createNewTileEntity(World worldIn, int meta)
     {
@@ -48,6 +45,7 @@ public class BlockWaypoint extends BlockContainer
 	@Nullable
     public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, IBlockAccess worldIn, BlockPos pos)
     {
+		//return super.getCollisionBoundingBox(blockState, worldIn, pos);
         return NULL_AABB;
     }
 

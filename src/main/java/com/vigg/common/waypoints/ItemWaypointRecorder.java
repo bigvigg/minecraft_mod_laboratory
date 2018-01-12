@@ -63,8 +63,6 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		
 		if (worldIn.isRemote)
 		{
-			Minecraft mc = Minecraft.getMinecraft();
-			
 			RayTraceResult objectClicked = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(100, 1.0F);
 			
 			if (objectClicked != null/* && objectClicked.sideHit == EnumFacing.UP*/)
@@ -273,7 +271,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	}
 	
 	@Override
-	public boolean containsWaypoint(ItemStack container, int x, int y, int z)
+	public IWaypointStorage.WaypointEntry getWaypoint(ItemStack container, int x, int y, int z)
 	{
 		if (container.hasTagCompound())
     	{
@@ -289,13 +287,13 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
     				wp.deserializeNBT(nbtWaypointList.getCompoundTagAt(i));
     				
     				if (wp.x == x && wp.y == y && wp.z == z)
-    					return true;
+    					return new IWaypointStorage.WaypointEntry(i, wp);
     			}
     			
     		}
     	}
 
-		return false;
+		return null;
 	}
 	
 	

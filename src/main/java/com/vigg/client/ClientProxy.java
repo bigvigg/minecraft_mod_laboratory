@@ -24,7 +24,7 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void init(FMLInitializationEvent e) {
         super.init(e);
-        
+
         //reg(ModBlocks.getBlockWaypoint());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityWaypoint.class, new TileEntityWaypointRenderer());
         //ClientRegistry.bindTileEntitySpecialRenderer(TileEntityWaypoint.class, new TileEntityBeaconRenderer());

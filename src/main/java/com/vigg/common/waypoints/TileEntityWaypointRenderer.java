@@ -1,6 +1,17 @@
 package com.vigg.common.waypoints;
 
-import net.minecraft.client.renderer.tileentity.TileEntityBeaconRenderer;
+import java.util.List;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BufferBuilder;
+import net.minecraft.client.renderer.EntityRenderer;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
@@ -8,22 +19,30 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 // code stolen from vanilla TileEntityBeaconRenderer
 
 @SideOnly(Side.CLIENT)
-public class TileEntityWaypointRenderer extends TileEntityBeaconRenderer
-{
-	
-}
-
-/*
 public class TileEntityWaypointRenderer extends TileEntitySpecialRenderer<TileEntityWaypoint>
 {
     public static final ResourceLocation TEXTURE_BEACON_BEAM = new ResourceLocation("textures/entity/beacon_beam.png");
+    
+    private Minecraft mc;
 
-    public void render(TileEntityBeacon te, double x, double y, double z, float partialTicks, int destroyStage, float alpha)
+    public TileEntityWaypointRenderer()
     {
-        this.renderBeacon(x, y, z, (double)partialTicks, (double)te.shouldBeamRender(), te.getBeamSegments(), (double)te.getWorld().getTotalWorldTime());
+    	super();
+    	
+    	mc = Minecraft.getMinecraft();
+    }
+    
+    @Override
+    public void render(TileEntityWaypoint te, double x, double y, double z, float partialTicks, int destroyStage, float alpha)
+    {
+        this.renderBeacon(x, y, z, (double)partialTicks, 1f, te.getBeamSegments(), (double)te.getWorld().getTotalWorldTime());
+        
+        RenderManager rm = mc.getRenderManager();
+        //EntityRenderer.drawNameplate(mc.fontRenderer, "stub wp label", (float)x, (float)y, (float)z, -60, rm.playerViewY, rm.playerViewX, (rm.options.thirdPersonView == 2), false);
+        this.drawNameplate(te, te.getName(), x, y, z, 100);
     }
 
-    public void renderBeacon(double x, double y, double z, double partialTicks, double textureScale, List<TileEntityBeacon.BeamSegment> beamSegments, double totalWorldTime)
+    public void renderBeacon(double x, double y, double z, double partialTicks, double textureScale, List<TileEntityWaypoint.BeamSegment> beamSegments, double totalWorldTime)
     {
         GlStateManager.alphaFunc(516, 0.1F);
         this.bindTexture(TEXTURE_BEACON_BEAM);
@@ -35,7 +54,7 @@ public class TileEntityWaypointRenderer extends TileEntitySpecialRenderer<TileEn
 
             for (int j = 0; j < beamSegments.size(); ++j)
             {
-                TileEntityBeacon.BeamSegment tileentitybeacon$beamsegment = beamSegments.get(j);
+                TileEntityWaypoint.BeamSegment tileentitybeacon$beamsegment = beamSegments.get(j);
                 renderBeamSegment(x, y, z, partialTicks, textureScale, totalWorldTime, i, tileentitybeacon$beamsegment.getHeight(), tileentitybeacon$beamsegment.getColors());
                 i += tileentitybeacon$beamsegment.getHeight();
             }
@@ -80,6 +99,9 @@ public class TileEntityWaypointRenderer extends TileEntitySpecialRenderer<TileEn
         double d13 = 1.0D;
         double d14 = -1.0D + d2;
         double d15 = (double)height * textureScale * (0.5D / beamRadius) + d14;
+        
+        // commented out to skip the rendering of the opaque center cube of the beacon, leaving only the transparent outline rendered in the next code block
+        /*
         bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
         bufferbuilder.pos(x + d4, y + (double)i, z + d5).tex(1.0D, d15).color(f, f1, f2, 1.0F).endVertex();
         bufferbuilder.pos(x + d4, y + (double)yOffset, z + d5).tex(1.0D, d14).color(f, f1, f2, 1.0F).endVertex();
@@ -98,6 +120,7 @@ public class TileEntityWaypointRenderer extends TileEntitySpecialRenderer<TileEn
         bufferbuilder.pos(x + d4, y + (double)yOffset, z + d5).tex(0.0D, d14).color(f, f1, f2, 1.0F).endVertex();
         bufferbuilder.pos(x + d4, y + (double)i, z + d5).tex(0.0D, d15).color(f, f1, f2, 1.0F).endVertex();
         tessellator.draw();
+        */
         GlStateManager.enableBlend();
         GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
         GlStateManager.depthMask(false);
@@ -136,10 +159,9 @@ public class TileEntityWaypointRenderer extends TileEntitySpecialRenderer<TileEn
         GlStateManager.depthMask(true);
     }
 
-    public boolean isGlobalRenderer(TileEntityBeacon te)
+    public boolean isGlobalRenderer(TileEntityWaypoint te)
     {
         return true;
     }
 }
 
-*/

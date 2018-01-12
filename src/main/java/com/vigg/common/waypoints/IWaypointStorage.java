@@ -14,5 +14,23 @@ public interface IWaypointStorage<T>
 	
 	public int getWaypointCount(T container);
 	
-	public boolean containsWaypoint(T container, int x, int y, int z);
+	//public boolean containsWaypoint(T container, int x, int y, int z);
+	
+	public WaypointEntry getWaypoint(T container, int x, int y, int z);
+	
+	public class WaypointEntry
+	{
+		public int index;
+		public Waypoint waypoint;
+		
+		public WaypointEntry()
+		{	
+		}
+		
+		public WaypointEntry(int parIndex, Waypoint parWaypoint)
+		{	
+			index = parIndex;
+			waypoint = parWaypoint;
+		}
+	}
 }
