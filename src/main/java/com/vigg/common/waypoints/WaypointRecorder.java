@@ -96,22 +96,7 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 									ModPacketHandler.INSTANCE.sendToServer(new AddWaypointToRecorderMessage(newWaypoint));
 								}
 							}
-							else
-							{
-								//stub
-								System.out.println("STUB blockBelow " + blockBelow);
-							}
 						}
-						else
-						{
-							//stub
-							System.out.println("STUB possiblePosState " + possiblePosState);
-						}
-					}
-					else
-					{
-						//stub
-						System.out.println("STUB possiblePos " + possiblePos);
 					}
 				}
 				
@@ -158,28 +143,31 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 		{
 			// client side
 			
-			Waypoint[] waypoints = getWaypoints(stack);
 			
-			// Make sure the beacon block is spawned for each current waypoint.
-			// Since these waypoint blocks are 100% just-for-looks and do not interact with anything in the world,
-			// I'm gonna go against common wisdom and create them *only* on the client side.
-			for (int i = 0; i < waypoints.length; i++)
+			if (isSelected)
 			{
-				Waypoint wp = waypoints[i];
-				BlockPos pos = new BlockPos(wp.x, wp.y, wp.z);
-				IBlockState waypointState = ModBlocks.getBlockWaypoint().getDefaultState();
+				Waypoint[] waypoints = getWaypoints(stack);
 				
-				IBlockState currentState = worldIn.getBlockState(pos);
-				if (currentState != waypointState)
+				// Make sure the BlockWaypoint is spawned for each current waypoint.
+				// Since these waypoint blocks are 100% just-for-looks and do not interact with anything in the world,
+				// I'm gonna go against common wisdom and create them *only* on the client side.
+				for (int i = 0; i < waypoints.length; i++)
 				{
-					System.out.println("STUB setting waypoint blockstate at " + pos.toString());
-					worldIn.setBlockState(pos, waypointState);
+					Waypoint wp = waypoints[i];
+					BlockPos pos = new BlockPos(wp.x, wp.y, wp.z);
+					IBlockState waypointState = ModBlocks.getBlockWaypoint().getDefaultState();
 					
-					// make the beacon start rendering
-					TileEntity te = worldIn.getTileEntity(pos);
-					if (te instanceof TileEntityWaypoint)
+					IBlockState originalState = worldIn.getBlockState(pos);
+					if (originalState != waypointState)
 					{
-						((TileEntityWaypoint)te).updateBeacon();
+						worldIn.setBlockState(pos, waypointState);
+						
+						// initialize the TileEntityWaypoint
+						TileEntity te = worldIn.getTileEntity(pos);
+						if (te instanceof TileEntityWaypoint)
+						{
+							((TileEntityWaypoint)te).initWaypoint(getUUID(stack), (EntityPlayer)entityIn, originalState);
+						}
 					}
 				}
 			}
@@ -282,6 +270,33 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 		return 0;
 	}
 	
+	@Override
+	public boolean containsWaypoint(ItemStack container, int x, int y, int z)
+	{
+		if (container.hasTagCompound())
+    	{
+    		NBTTagCompound nbtTag = container.getTagCompound();
+    		if (nbtTag.hasKey(ITEMSTACK_WAYPOINTS_TAG_KEY))
+    		{
+    			NBTTagList nbtWaypointList = (NBTTagList)nbtTag.getTagList(ITEMSTACK_WAYPOINTS_TAG_KEY, Constants.NBT.TAG_COMPOUND);
+    			int waypointCount = nbtWaypointList.tagCount();
+    			
+    			for (int i = 0; i < waypointCount; i++)
+    			{
+    				Waypoint wp = new Waypoint();
+    				wp.deserializeNBT(nbtWaypointList.getCompoundTagAt(i));
+    				
+    				if (wp.x == x && wp.y == y && wp.z == z)
+    					return true;
+    			}
+    			
+    		}
+    	}
+
+		return false;
+	}
+	
+	
 	// note: these functions could be made into an Item base class if we need UUID in other stuff
 	public UUID getUUID(ItemStack stack)
 	{
@@ -309,17 +324,6 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 		}
 	}
 
-	/*
-	@Override
-	public NBTTagCompound getNBTShareTag(ItemStack stack) 
-	{
-		System.out.println("STUB getNBTShareTag()");
-		
-		
-		
-		return super.getNBTShareTag(stack);		
-	}
-	*/
 	
 }
 
