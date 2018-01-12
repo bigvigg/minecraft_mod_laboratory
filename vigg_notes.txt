@@ -24,28 +24,12 @@ Item.getNBTShareTag()
 
 - next to do:
 
-    - validate item uuid before adding waypoint
+    - include recorder UUID in packet and make sure it matches heldItem's UUID before adding waypoint on server side
     
-    - extend TileEntityBeacon
-        - to add additional reference to player who placed it
-        - to hook into onTick and self-destruct if player not found, or player not holding waypoint recorder
-            - (technically, "player not found" should never happen, since the beacon is entirely client-side)
-            ** also, add UUID back to WaypointRecorder item, and store recorderUUID in this new TileEntity class.
-               use in onTick check to also destroy waypoint if a *different* recorder is equipped
     
     - add property to Waypoint to track what world it's in
         + add validation to server to make sure all waypoints are in same world when adding a new waypoint
         
-    - extend distance of ray trace to be waaaaay further
-    
-    - make code so that waypoints don't spawn on top of non-solid blocks (no embedding in ground)
-    
-    - before adding waypoint:
-        + make sure there isn't already a TileEntity at that position
-        + save old blockstate?
-    
-    
-            
 
         
         

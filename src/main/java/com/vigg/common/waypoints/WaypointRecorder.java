@@ -158,7 +158,8 @@ public class WaypointRecorder extends Item implements IWaypointStorage<ItemStack
 					IBlockState waypointState = ModBlocks.getBlockWaypoint().getDefaultState();
 					
 					IBlockState originalState = worldIn.getBlockState(pos);
-					if (originalState != waypointState)
+					TileEntity originalEntity = worldIn.getTileEntity(pos);
+					if (originalState != waypointState && originalEntity == null) // don't destroy other TileEntities to show the waypoint, since that could potentially cause freaky client-side bugs/crashes
 					{
 						worldIn.setBlockState(pos, waypointState);
 						
