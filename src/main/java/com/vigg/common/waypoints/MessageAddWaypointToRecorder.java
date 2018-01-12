@@ -13,24 +13,24 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
 // sent from client to server when player right clicks on the ground to add a new waypoint
-public class AddWaypointToRecorderMessage implements IMessage 
+public class MessageAddWaypointToRecorder implements IMessage 
 {
 	private int index = 0; // only used when sending from server to client
     private Waypoint waypoint;
 
     // default constructor required
-    public AddWaypointToRecorderMessage() 
+    public MessageAddWaypointToRecorder() 
     {
     }
 
-    public AddWaypointToRecorderMessage(int parIndex, Waypoint parWaypoint) 
+    public MessageAddWaypointToRecorder(int parIndex, Waypoint parWaypoint) 
     {
     	index = parIndex;
      	waypoint = parWaypoint;
     }
     
     // this constructor without the index is here for convenience of the client, which doesn't send an index to the server
-    public AddWaypointToRecorderMessage(Waypoint parWaypoint) 
+    public MessageAddWaypointToRecorder(Waypoint parWaypoint) 
     {
      	waypoint = parWaypoint;
     }
@@ -51,10 +51,10 @@ public class AddWaypointToRecorderMessage implements IMessage
 		ByteBufUtils.writeTag(buf, waypoint.serializeNBT());
     }
 
-    public static class Handler implements IMessageHandler<AddWaypointToRecorderMessage, IMessage> 
+    public static class Handler implements IMessageHandler<MessageAddWaypointToRecorder, IMessage> 
     {
         @Override
-        public IMessage onMessage(final AddWaypointToRecorderMessage message, MessageContext ctx) 
+        public IMessage onMessage(final MessageAddWaypointToRecorder message, MessageContext ctx) 
         {
         	// sanity check
         	if (message.waypoint == null || ctx.side.isClient())

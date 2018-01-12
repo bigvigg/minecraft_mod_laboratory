@@ -93,7 +93,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 								if (heldItem != null && heldItem.getItem() == ModItems.getWaypointRecorder())
 								{
 									Waypoint newWaypoint = new Waypoint(possiblePos.getX(), possiblePos.getY(), possiblePos.getZ());
-									ModPacketHandler.INSTANCE.sendToServer(new AddWaypointToRecorderMessage(newWaypoint));
+									ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(newWaypoint));
 								}
 							}
 						}

@@ -1,6 +1,6 @@
 package com.vigg.common;
 
-import com.vigg.common.waypoints.AddWaypointToRecorderMessage;
+import com.vigg.common.waypoints.MessageAddWaypointToRecorder;
 
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
@@ -15,7 +15,7 @@ public class ModPacketHandler
 		int nextChannelID = -1;
 		
 		//server
-		INSTANCE.registerMessage(AddWaypointToRecorderMessage.Handler.class, AddWaypointToRecorderMessage.class, nextChannelID++, Side.SERVER);
+		INSTANCE.registerMessage(MessageAddWaypointToRecorder.Handler.class, MessageAddWaypointToRecorder.class, nextChannelID++, Side.SERVER);
 		//INSTANCE.registerMessage(RequestSynchingItemDataMessage.Handler.class, RequestSynchingItemDataMessage.class, nextChannelID++, Side.SERVER);
 		
 		//client
