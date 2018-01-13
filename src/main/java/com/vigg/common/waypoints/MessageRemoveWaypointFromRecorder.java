@@ -16,7 +16,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
-// sent from client to server when player right clicks on an existing waypoint
+// sent from client to server when player right clicks on an existing waypoint while in add/remove mode
 public class MessageRemoveWaypointFromRecorder implements IMessage 
 {
 	private UUID recorderUUID = null;

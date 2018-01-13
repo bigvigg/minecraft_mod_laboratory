@@ -36,6 +36,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 @Mod.EventBusSubscriber
 public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemStack>
@@ -44,10 +45,12 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	
 	private final static String ITEMSTACK_UUID_TAG_KEY = "com.vigg.uuid";
 	private final static String ITEMSTACK_WAYPOINTS_TAG_KEY = "com.vigg.waypoints";
-	private final static String ITEMSTACK_RECORDER_MODE_TAG_KEY = "com.vigg.recordermode";
+	private final static String ITEMSTACK_RECORDER_MODE_TAG_KEY = "com.vigg.wprecorder.mode";
+	private final static String ITEMSTACK_RECORDER_SELECTED_WAYPOINT_INDEX_TAG_KEY = "com.vigg.wprecorder.selectedIndex";
+	
 	private final static double MAX_WAYPOINT_CLICK_DISTANCE = 50D;
 	
-	private static UUID lastTickRecorderUUID = null;
+	private static UUID lastTickRecorderUUID = null; // set every tick in onClientTick
 	
 	
 	@SubscribeEvent
@@ -175,11 +178,11 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		return super.onItemRightClick(worldIn, playerIn, handIn);
 	}
 	
-	
+	@SideOnly(Side.CLIENT)
 	private void handleRightClick_AddRemoveMode(World worldIn, EntityPlayer playerIn, EnumHand handIn)
 	{
 		ItemStack recorder = playerIn.getHeldItem(handIn);
-		WaypointEntry clickedWaypointEntry = getWaypointClicked(playerIn);
+		WaypointEntry clickedWaypointEntry = getTargetedWaypoint(playerIn);
 
 		if (clickedWaypointEntry == null)
 		{
@@ -212,12 +215,21 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		}
 	}
 
+	@SideOnly(Side.CLIENT)
 	private void handleRightClick_EditMode(World worldIn, EntityPlayer playerIn, EnumHand handIn)
 	{
+		// remember - the selected waypoint purely client side, and the nbt tag never gets set on the server
 		
+		ItemStack recorder = playerIn.getHeldItem(handIn);
+		WaypointEntry clickedWaypointEntry = getTargetedWaypoint(playerIn);
+
+		if (clickedWaypointEntry != null)
+		{
+			this.setSelectedWaypoint(recorder, clickedWaypointEntry.index);
+		}
 	}
 	
-	private WaypointEntry getWaypointClicked(EntityPlayer playerIn)
+	private WaypointEntry getTargetedWaypoint(EntityPlayer playerIn)
 	{
 		// traverse down the player's current line of sight, evaluating each block along the way until one of 3 things happens:
 		//	1. we find a solid block, in which case we'll attempt to add a new waypoint at that spot
@@ -421,7 +433,9 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	}
 
 
-
+    
+    // IWaypointStorage stuff
+    
 	@Override
     public Waypoint[] getWaypoints(ItemStack container)
     {
@@ -527,8 +541,33 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		return null;
 	}
 	
+	@Override
+	public Waypoint getWaypoint(ItemStack container, int index)
+	{
+		if (container.hasTagCompound())
+    	{
+    		NBTTagCompound nbtTag = container.getTagCompound();
+    		if (nbtTag.hasKey(ITEMSTACK_WAYPOINTS_TAG_KEY))
+    		{
+    			NBTTagList nbtWaypointList = (NBTTagList)nbtTag.getTagList(ITEMSTACK_WAYPOINTS_TAG_KEY, Constants.NBT.TAG_COMPOUND);
+    			
+    			if (index < nbtWaypointList.tagCount())
+    			{
+	    			Waypoint wp = new Waypoint();
+	    			wp.deserializeNBT(nbtWaypointList.getCompoundTagAt(index));
+	    			return wp;
+    			}
+    		}
+    	}
+
+		return null;
+	}
 	
+	
+	
+	// uuid stuff
 	// note: these functions could be made into an Item base class if we need UUID in other stuff
+	
 	public UUID getUUID(ItemStack stack)
 	{
 		if (stack.hasTagCompound())
@@ -554,7 +593,42 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			nbtTag.setString(ITEMSTACK_UUID_TAG_KEY, UUID.randomUUID().toString());
 		}
 	}
+	
+	
+	
+	// selected waypoint stuff
+	
+	@SideOnly(Side.CLIENT)
+	private int getSelectedWaypointIndex(ItemStack stack)
+	{
+		int selectedIndex = -1;
 
+		if (stack.hasTagCompound())
+		{
+			NBTTagCompound nbtTag = stack.getTagCompound();
+			if (nbtTag.hasKey(ITEMSTACK_RECORDER_SELECTED_WAYPOINT_INDEX_TAG_KEY))
+			{
+				selectedIndex = nbtTag.getInteger(ITEMSTACK_RECORDER_SELECTED_WAYPOINT_INDEX_TAG_KEY);
+			}
+		}
+
+		return selectedIndex;
+	}
+	
+	@SideOnly(Side.CLIENT)
+	private void setSelectedWaypoint(ItemStack stack, int waypointIndex)
+	{
+		if (!stack.hasTagCompound())
+			stack.setTagCompound(new NBTTagCompound());
+		
+		NBTTagCompound nbtTag = stack.getTagCompound();
+		nbtTag.setInteger(ITEMSTACK_RECORDER_SELECTED_WAYPOINT_INDEX_TAG_KEY, waypointIndex);
+	}
+	
+	
+	
+	// recorder mode stuff
+	
 	public RecorderMode getRecorderMode(ItemStack stack)
 	{
 		RecorderMode mode;
@@ -601,7 +675,6 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		else
 			return "E";
 	}
-	
 	
 	public enum RecorderMode
 	{

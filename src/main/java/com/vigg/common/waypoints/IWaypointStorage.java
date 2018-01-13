@@ -23,6 +23,8 @@ public interface IWaypointStorage<T>
 	
 	public WaypointEntry getWaypoint(T container, int x, int y, int z);
 	
+	public Waypoint getWaypoint(T container, int index);
+	
 	
 	
 	public class WaypointEntry implements INBTSerializable<NBTTagCompound>
