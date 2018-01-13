@@ -15,11 +15,15 @@ public interface IWaypointStorage<T>
 	// returns the index the waypoint was added at
 	public int addWaypoint(T container, Waypoint waypoint);
 	
+	public void removeWaypoint(T container, int index);
+	
 	public int getWaypointCount(T container);
 	
 	//public boolean containsWaypoint(T container, int x, int y, int z);
 	
 	public WaypointEntry getWaypoint(T container, int x, int y, int z);
+	
+	
 	
 	public class WaypointEntry implements INBTSerializable<NBTTagCompound>
 	{

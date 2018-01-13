@@ -1,5 +1,7 @@
 package com.vigg.common.waypoints;
 
+import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,7 +16,6 @@ import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -78,19 +79,27 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			ItemStack recorder = playerIn.getHeldItem(handIn);
 			Waypoint[] waypoints = getWaypoints(recorder);
 			Vec3d lookVec = playerIn.getLookVec();
-			Vec3d positionVec = playerIn.getPositionVector();			
-			BlockPos nextLineOfSightPos = null;
+			Vec3d positionVec = playerIn.getPositionVector().addVector(0, 2, 0);			
+			BlockPos lastLineOfSightPos = null;
 			
 			lineOfSightLoop:
-			for (double distanceCounter = 0D; distanceCounter < MAX_WAYPOINT_CLICK_DISTANCE; distanceCounter++)
+			for (double distanceCounter = 0D; distanceCounter < MAX_WAYPOINT_CLICK_DISTANCE; distanceCounter += 0.2D)
 			{
-				nextLineOfSightPos = new BlockPos(positionVec.add(lookVec.scale(distanceCounter)));
+				BlockPos nextLineOfSightPos = new BlockPos(positionVec.add(lookVec.scale(distanceCounter)));
+				
+				// don't waste time evaluating the same position twice (which will happen if the distanceCounter incrementer above is less than 1.0D, for greater accuracy)
+				if (lastLineOfSightPos != null && lastLineOfSightPos.equals(nextLineOfSightPos))
+					continue;
+				
 				IBlockState nextLineOfSightBlock = worldIn.getBlockState(nextLineOfSightPos);
 				
 				// see if any waypoints are below this next block in the player's line of sight
 				for (int waypointIndex = 0; waypointIndex < waypoints.length; waypointIndex++)
 				{
 					Waypoint nextWaypoint = waypoints[waypointIndex];
+
+					//System.out.println("** STUB - " + nextLineOfSightPos.toString() + " vs " + nextWaypoint.getCoordinateString());
+					
 					if (nextWaypoint.x == nextLineOfSightPos.getX() && nextWaypoint.z == nextLineOfSightPos.getZ()/* && nextWaypoint.y <= nextLineOfSightPos.getY()*/)
 					{
 						// Player's line of sight has crossed somewhere above, below, or directly through an existing waypoint.
@@ -133,6 +142,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 					break lineOfSightLoop; 
 				}
 				
+				lastLineOfSightPos = nextLineOfSightPos;
 			} // end lineOfSightLoop
 			
 			
@@ -143,40 +153,29 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			{
 				// attempt to add a new waypoint entry
 				
-				// try a couple different spots, and put the waypoint on the first one that meets the conditions.
-				// if neither spot matches the conditions, then no waypoint is placed, and nothing happens as a result of the player's click.
-				BlockPos[] possibleWaypointPositions = new BlockPos[] {
-						nextLineOfSightPos,					// first try to place at the actual position clicked (example: player clicks on tall grass)
-						nextLineOfSightPos.add(0, 1, 0)		// then try to place above the clicked position (example: player clicks on the ground)
-				};
-				for (BlockPos possiblePos : possibleWaypointPositions)
+				// note: to find the block that the player clicked, we could try to use the final calculated position from 
+				// traversing the line-of-sight vector above, but in practice that doesn't seem to be as precise as a ray trace,
+				// so let's just burn a few extra client cpu cycles to make sure we know *exactly* where the player clicked
+				RayTraceResult rayTraceResult = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(MAX_WAYPOINT_CLICK_DISTANCE, 1.0F);
+				if (rayTraceResult != null)
 				{
-					// don't place waypoints very far above the player, because that's probably an accident and doesn't make sense
-					if (possiblePos != null && possiblePos.getY() <= (playerIn.getPosition().getY() + 1) && possiblePos.getY() > 0)
+					BlockPos posClicked = rayTraceResult.getBlockPos();
+					if (posClicked != null)
 					{
-						// don't place waypoints inside of solid blocks
-						IBlockState possiblePosState = worldIn.getBlockState(possiblePos);
-						if (possiblePosState != null && possiblePosState.getMaterial() != null && !possiblePosState.getMaterial().isSolid())
-						{
-							// only place waypoints on top of solid blocks
-							IBlockState blockBelow = worldIn.getBlockState(possiblePos.add(0, -1, 0));
-							if (blockBelow != null && blockBelow.getMaterial() != null && blockBelow.getMaterial().isSolid())
-							{
-								ItemWaypointRecorder itemWaypointRecorder = ModItems.getWaypointRecorder();
-								ItemStack heldItem = playerIn.getHeldItem(handIn);
-								if (heldItem != null && heldItem.getItem() == itemWaypointRecorder)
-								{
-									Waypoint newWaypoint = new Waypoint(possiblePos.getX(), possiblePos.getY(), possiblePos.getZ());
-									ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(itemWaypointRecorder.getUUID(heldItem), newWaypoint));
-								}
-							}
-						}
+						ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(
+								ModItems.getWaypointRecorder().getUUID(playerIn.getHeldItem(handIn)), 
+								posClicked.getX(),
+								posClicked.getY(),
+								posClicked.getZ()
+						));
 					}
 				}
+				
 			}
 			else
 			{
-				// the player clicked on an existing waypoint
+				// attempt to remove the waypoint that the player clicked on
+				
 				ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), clickedWaypointEntry));
 			}
 		}
@@ -343,6 +342,14 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		nbtWaypointList.appendTag(waypoint.serializeNBT());
 		
 		return (nbtWaypointList.tagCount() - 1);
+	}
+	
+	@Override
+	public void removeWaypoint(ItemStack container, int index)
+	{
+		List<Waypoint> waypoints = new LinkedList<Waypoint>(Arrays.asList(getWaypoints(container)));
+		waypoints.remove(index);
+		setWaypoints(container, waypoints.toArray(new Waypoint[waypoints.size()]));
 	}
 	
 	@Override
