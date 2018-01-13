@@ -98,7 +98,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			message = recorder.getDisplayName() + " is in Edit Mode";
 		}
 		
-		player.sendMessage(new TextComponentString(message));
+		player.sendStatusMessage(new TextComponentString(message), true);
 	}
 	
 	
