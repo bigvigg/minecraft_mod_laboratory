@@ -38,7 +38,6 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
-@Mod.EventBusSubscriber
 public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemStack>
 {
 	// static stuff
@@ -50,45 +49,9 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	
 	private final static double MAX_WAYPOINT_CLICK_DISTANCE = 50D;
 	
-	private static UUID lastTickRecorderUUID = null; // set every tick in onClientTick
 	
-	
-	@SubscribeEvent
-	public static void onClientTick(TickEvent.ClientTickEvent e)
-	{
-		// sanity check
-		if (e.side != Side.CLIENT)
-			return;
-		
-		// Whenever a recorder is selected in the player's hand, show them a message to remind them what mode it's in.
-		// (it's weird that I can't find any sort of ItemSelected event hook, and instead have to do it this way, by checking every tick)
-		
-		ItemWaypointRecorder itemRecorder = ModItems.getWaypointRecorder();
-		EntityPlayerSP player = Minecraft.getMinecraft().player;
-		
-		if (player != null)
-		{
-			ItemStack heldItem = player.getHeldItemMainhand();
-			
-			if (heldItem == null)
-				lastTickRecorderUUID = null;
-			else if (heldItem.getItem() == itemRecorder)
-			{
-				UUID currentUUID = itemRecorder.getUUID(heldItem);
-
-				if (currentUUID != null && (lastTickRecorderUUID == null || !currentUUID.equals(lastTickRecorderUUID)))
-				{
-					showModeMessage(player, heldItem, itemRecorder.getRecorderMode(heldItem));
-				}
-				
-				lastTickRecorderUUID = currentUUID;
-			}
-			else
-				lastTickRecorderUUID = null;
-		}
-	}
-	
-	private static void showModeMessage(EntityPlayer player, ItemStack recorder, RecorderMode mode)
+	@SideOnly(Side.CLIENT)
+	public static void showModeMessage(EntityPlayer player, ItemStack recorder, RecorderMode mode)
 	{
 		String message;
 		
@@ -138,28 +101,14 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		System.out.println("STUB onItemRightClick");
 		
 		ItemStack recorder = playerIn.getHeldItem(handIn);
-		RecorderMode currentMode = getRecorderMode(recorder);
-		
+				
 		if (worldIn.isRemote)
 		{
 			// client side
-
-			if (!playerIn.isSneaking())
-			{
-				// player did a normal right click, without the shift key
-				
-				if (currentMode == RecorderMode.ADD_REMOVE)
-					handleRightClick_AddRemoveMode(worldIn, playerIn, handIn);
-				else
-				{
-					handleRightClick_EditMode(worldIn, playerIn, handIn);
-				}
-			}
-		}
-		else
-		{
-			// server side
 			
+			
+			RecorderMode currentMode = getRecorderMode(recorder);
+
 			if (playerIn.isSneaking())
 			{
 				// player shift+right clicked - toggle recorder mode
@@ -172,6 +121,17 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 				
 				setRecorderMode(recorder, newMode);
 				showModeMessage(playerIn, recorder, newMode);
+			}
+			else
+			{
+				// player did a normal right click, without the shift key
+				
+				if (currentMode == RecorderMode.ADD_REMOVE)
+					handleRightClick_AddRemoveMode(worldIn, playerIn, handIn);
+				else
+				{
+					handleRightClick_EditMode(worldIn, playerIn, handIn);
+				}
 			}
 		}
 		
@@ -229,6 +189,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		}
 	}
 	
+	@SideOnly(Side.CLIENT)
 	private WaypointEntry getTargetedWaypoint(EntityPlayer playerIn)
 	{
 		// traverse down the player's current line of sight, evaluating each block along the way until one of 3 things happens:
@@ -629,6 +590,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	
 	// recorder mode stuff
 	
+	@SideOnly(Side.CLIENT)
 	public RecorderMode getRecorderMode(ItemStack stack)
 	{
 		RecorderMode mode;
@@ -647,6 +609,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		return mode;
 	}
 	
+	@SideOnly(Side.CLIENT)
 	public void setRecorderMode(ItemStack stack, RecorderMode mode)
 	{
 		if (!stack.hasTagCompound())
@@ -656,6 +619,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		nbtTag.setString(ITEMSTACK_RECORDER_MODE_TAG_KEY, stringFromMode(mode));
 	}
 	
+	@SideOnly(Side.CLIENT)
 	private RecorderMode modeFromString(String s)
 	{
 		RecorderMode mode;
@@ -668,6 +632,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		return mode;
 	}
 	
+	@SideOnly(Side.CLIENT)
 	private String stringFromMode(RecorderMode r)
 	{
 		if (r == RecorderMode.ADD_REMOVE)
