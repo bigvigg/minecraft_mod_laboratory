@@ -12,14 +12,19 @@ public class Waypoint implements INBTSerializable<NBTTagCompound>
 	private String label = null;
 	public String getLabel()
 	{
-		if (label == null)
-			return "[" + Integer.toString(x) + "x " + Integer.toString(y) + "y " + Integer.toString(z) + "z]";
-		else
+		if (this.hasCustomLabel())
 			return label;
+		else
+			return this.getCoordinateString();
+			
 	}
 	public void setLabel(String newLabel)
 	{
 		this.label = newLabel;
+	}
+	public boolean hasCustomLabel()
+	{
+		return (label != null && !label.isEmpty());
 	}
 	
 	
@@ -40,6 +45,12 @@ public class Waypoint implements INBTSerializable<NBTTagCompound>
 		this.setLabel(Label);
 	}
 	
+	
+	
+	public String getCoordinateString()
+	{
+		return "[" + Integer.toString(x) + "x " + Integer.toString(y) + "y " + Integer.toString(z) + "z]";
+	}
 	
 	@Override
 	public NBTTagCompound serializeNBT() 

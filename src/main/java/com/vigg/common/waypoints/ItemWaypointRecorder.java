@@ -66,20 +66,66 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		
 		if (worldIn.isRemote)
 		{
-			// STUB - testing
+			// client side
+			
+			// traverse down the player's current line of sight, evaluating each block along the way until one of 3 things happens:
+			//	1. we find a solid block, in which case we'll attempt to add a new waypoint at that spot
+			//	2. we find a block above an existing waypoint, in which case we'll remove that waypoint
+			//	3. we reach the limit defined by MAX_WAYPOINT_CLICK_DISTANCE without either 1 or 2 happening,
+			//	   in which case we attempt to add a waypoint there at the distance limit
+			
 			WaypointEntry clickedWaypointEntry = null;
 			ItemStack recorder = playerIn.getHeldItem(handIn);
 			Waypoint[] waypoints = getWaypoints(recorder);
 			Vec3d lookVec = playerIn.getLookVec();
-			Vec3d positionVec = playerIn.getPositionVector();
-			
+			Vec3d positionVec = playerIn.getPositionVector();			
 			BlockPos nextLineOfSightPos = null;
+			
 			lineOfSightLoop:
 			for (double distanceCounter = 0D; distanceCounter < MAX_WAYPOINT_CLICK_DISTANCE; distanceCounter++)
 			{
 				nextLineOfSightPos = new BlockPos(positionVec.add(lookVec.scale(distanceCounter)));
 				IBlockState nextLineOfSightBlock = worldIn.getBlockState(nextLineOfSightPos);
-								
+				
+				// see if any waypoints are below this next block in the player's line of sight
+				for (int waypointIndex = 0; waypointIndex < waypoints.length; waypointIndex++)
+				{
+					Waypoint nextWaypoint = waypoints[waypointIndex];
+					if (nextWaypoint.x == nextLineOfSightPos.getX() && nextWaypoint.z == nextLineOfSightPos.getZ()/* && nextWaypoint.y <= nextLineOfSightPos.getY()*/)
+					{
+						// Player's line of sight has crossed somewhere above, below, or directly through an existing waypoint.
+
+						// See if there are any solid blocks between player's line of sight and the waypoint
+						// (e.g. if the player is on the top floor of a house, and the waypoint is on the bottom floor).
+						// If there is no solid block between the player's line of sight and the waypoint,
+						// then assume that the player was intentionally attempting to click on that waypoint's visible beacon.
+						
+						// hacky workaround for situation where player's line of site goes directly UNDER the waypoint, and through
+						// the solid block below it (this happens a lot)
+						int searchDownStartY = nextLineOfSightPos.getY();
+						if (nextWaypoint.y <= positionVec.y)
+							searchDownStartY += 1;
+						
+						for (int searchDownCounter = searchDownStartY; searchDownCounter >= nextWaypoint.y; searchDownCounter--)
+						{
+							BlockPos nextBlockPos = new BlockPos(nextLineOfSightPos.getX(), searchDownCounter, nextLineOfSightPos.getZ());
+							IBlockState nextBlockDownState = worldIn.getBlockState(nextBlockPos);
+							if (nextBlockDownState.getBlock() == ModBlocks.getBlockWaypoint())
+							{
+								// we found the waypoint
+								clickedWaypointEntry = new WaypointEntry(waypointIndex, nextWaypoint);
+								break lineOfSightLoop;
+							}
+							else if (nextBlockDownState.getMaterial().isSolid())
+							{
+								// We hit a solid block, so the player probably *wasn't* trying to click this waypoint after all.
+								break lineOfSightLoop;
+							}
+						}						
+						// note: it *should* be impossible for code to reach this point, where it never found the waypoint
+					}
+				} // end waypoint loop
+				
 				if (nextLineOfSightBlock.getMaterial().isSolid())
 				{
 					// we hit a solid block.
@@ -87,42 +133,18 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 					break lineOfSightLoop; 
 				}
 				
-				// see if any waypoints are below this next block in the player's line of sight
-				for (int waypointIndex = 0; waypointIndex < waypoints.length; waypointIndex++)
-				{
-					Waypoint nextWaypoint = waypoints[waypointIndex];
-					
-					if (nextWaypoint.x == nextLineOfSightPos.getX() && nextWaypoint.z == nextLineOfSightPos.getZ() && nextWaypoint.y <= nextLineOfSightPos.getY())
-					{
-						// Player's line of sight has crossed somewhere above an existing waypoint.
-						//
-						// See if there are any solid blocks between player's line of sight and the waypoint
-						// (e.g. if the player is on the top floor of a house, and the waypoint is on the bottom floor).
-						// If there is no solid block between the player's line of sight and the waypoint,
-						// then assume that the player was intentionally attempting to click on that waypoint's visible beacon.
-						for (int lineOfSightToWaypointCounter = nextLineOfSightPos.getY(); lineOfSightToWaypointCounter >= nextWaypoint.y; lineOfSightToWaypointCounter--)
-						{
-							if (worldIn.getBlockState(new BlockPos(nextLineOfSightPos.getX(), lineOfSightToWaypointCounter, nextLineOfSightPos.getZ())).getMaterial().isSolid())
-							{
-								// We hit a solid block, so the player probably *wasn't* trying to click this waypoint after all.
-								break;
-							}
-						}
-						
-						// assume that the player was trying to click on this waypoint beacon
-						clickedWaypointEntry = new WaypointEntry(waypointIndex, nextWaypoint);
-						break lineOfSightLoop;
-					}
-				}
-			} // end LineOfSightLoop
+			} // end lineOfSightLoop
 			
 			
+			// now that we've finished evaluating the player's line of sight, we'll either attempt to add a new waypoint or remove
+			// an existing waypoint, depending on what we found.
 			
 			if (clickedWaypointEntry == null)
 			{
 				// attempt to add a new waypoint entry
 				
-				// try a few different spots, and put the waypoint on the first one that meets the conditions
+				// try a couple different spots, and put the waypoint on the first one that meets the conditions.
+				// if neither spot matches the conditions, then no waypoint is placed, and nothing happens as a result of the player's click.
 				BlockPos[] possibleWaypointPositions = new BlockPos[] {
 						nextLineOfSightPos,					// first try to place at the actual position clicked (example: player clicks on tall grass)
 						nextLineOfSightPos.add(0, 1, 0)		// then try to place above the clicked position (example: player clicks on the ground)
@@ -250,7 +272,20 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
     			tooltip.add("uuid: " + stackID.toString());
     	}
     	
-		tooltip.add(this.getWaypointCount(stack) + " waypoints");
+		tooltip.add(Integer.toString(getWaypointCount(stack)) + " waypoints");
+		if (Reference.DEBUG)
+    	{
+			Waypoint[] waypoints = getWaypoints(stack);
+			
+			for (int i = 0; i < waypoints.length; i++)
+			{
+				Waypoint wp = waypoints[i];
+				String line = " " + wp.getLabel();
+				if (wp.hasCustomLabel())
+					line += " " + wp.getCoordinateString();
+				tooltip.add(line);
+			}
+    	}
 	}
 
 

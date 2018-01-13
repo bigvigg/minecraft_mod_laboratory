@@ -13,6 +13,13 @@ Item.getNBTShareTag()
         - http://www.minecraftforge.net/forum/topic/54977-1112-best-way-to-sync-itemstack-capabilities-to-client/
     
 
+- ideas:
+    - make it so that charmed mobs can respawn at a set spawn point after death, with the inventories they had when they died.  this is the only
+      feasible way i can think of to make it so that charmed mobs could be used for mining.  would also be useful for charmed mobs with other
+      types of jobs though (guard duty, bodyguard duty, or whatever).
+        - some sort of cost to make a charmed mob start respawning
+        - additional cost to make the mob keep its inventory instead of dropping it where it died
+      
 - next to do:
 
     - add property to Waypoint to track what world it's in
@@ -20,6 +27,7 @@ Item.getNBTShareTag()
         
     - set a cap on max # of waypoints (ignore new waypoints and show message when right click after cap reached)    
 
+    - add shift+rightclick to change mode on recorder.  2nd mode to right click 2 waypoints and swap their index
             
         
     
