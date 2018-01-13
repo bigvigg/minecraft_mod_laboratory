@@ -14,6 +14,7 @@ import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -25,6 +26,7 @@ import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 
@@ -63,8 +65,21 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		
 		if (worldIn.isRemote)
 		{
-			RayTraceResult objectClicked = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(100, 1.0F);
+			// STUB - testing
+			Vec3d lookVec = playerIn.getLookVec();
+			Vec3d positionVec = playerIn.getPositionVector();
+			IBlockState newState = Blocks.GOLD_BLOCK.getDefaultState();
+			for (double i = 0D; i < 50D; i++)
+			{
+				BlockPos nextPos = new BlockPos(positionVec.add(lookVec.scale(i)));
+				IBlockState nextBlock = worldIn.getBlockState(nextPos);
+				
+				worldIn.setBlockState(nextPos, newState);
+			}
 			
+			//...
+			
+			RayTraceResult objectClicked = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(100, 1.0F);
 			if (objectClicked != null/* && objectClicked.sideHit == EnumFacing.UP*/)
 			{
 				BlockPos posClicked = objectClicked.getBlockPos();
