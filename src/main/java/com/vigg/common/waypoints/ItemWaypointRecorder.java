@@ -28,6 +28,7 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 
@@ -35,6 +36,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 {
 	private final static String ITEMSTACK_UUID_TAG_KEY = "com.vigg.uuid";
 	private final static String ITEMSTACK_WAYPOINTS_TAG_KEY = "com.vigg.waypoints";
+	private final static String ITEMSTACK_RECORDER_MODE_TAG_KEY = "com.vigg.recordermode";
 	private final static double MAX_WAYPOINT_CLICK_DISTANCE = 50D;
 		
 	public ItemWaypointRecorder() 
@@ -65,122 +67,169 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	{
 		System.out.println("STUB onItemRightClick");
 		
+		ItemStack recorder = playerIn.getHeldItem(handIn);
+		RecorderMode currentMode = getRecorderMode(recorder);
+		
 		if (worldIn.isRemote)
 		{
 			// client side
-			
-			// traverse down the player's current line of sight, evaluating each block along the way until one of 3 things happens:
-			//	1. we find a solid block, in which case we'll attempt to add a new waypoint at that spot
-			//	2. we find a block above an existing waypoint, in which case we'll remove that waypoint
-			//	3. we reach the limit defined by MAX_WAYPOINT_CLICK_DISTANCE without either 1 or 2 happening,
-			//	   in which case we attempt to add a waypoint there at the distance limit
-			
-			WaypointEntry clickedWaypointEntry = null;
-			ItemStack recorder = playerIn.getHeldItem(handIn);
-			Waypoint[] waypoints = getWaypoints(recorder);
-			Vec3d lookVec = playerIn.getLookVec();
-			Vec3d positionVec = playerIn.getPositionVector().addVector(0, 2, 0);			
-			BlockPos lastLineOfSightPos = null;
-			
-			lineOfSightLoop:
-			for (double distanceCounter = 0D; distanceCounter < MAX_WAYPOINT_CLICK_DISTANCE; distanceCounter += 0.2D)
-			{
-				BlockPos nextLineOfSightPos = new BlockPos(positionVec.add(lookVec.scale(distanceCounter)));
-				
-				// don't waste time evaluating the same position twice (which will happen if the distanceCounter incrementer above is less than 1.0D, for greater accuracy)
-				if (lastLineOfSightPos != null && lastLineOfSightPos.equals(nextLineOfSightPos))
-					continue;
-				
-				IBlockState nextLineOfSightBlock = worldIn.getBlockState(nextLineOfSightPos);
-				
-				// see if any waypoints are below this next block in the player's line of sight
-				for (int waypointIndex = 0; waypointIndex < waypoints.length; waypointIndex++)
-				{
-					Waypoint nextWaypoint = waypoints[waypointIndex];
 
-					//System.out.println("** STUB - " + nextLineOfSightPos.toString() + " vs " + nextWaypoint.getCoordinateString());
-					
-					if (nextWaypoint.x == nextLineOfSightPos.getX() && nextWaypoint.z == nextLineOfSightPos.getZ()/* && nextWaypoint.y <= nextLineOfSightPos.getY()*/)
-					{
-						// Player's line of sight has crossed somewhere above, below, or directly through an existing waypoint.
-
-						// See if there are any solid blocks between player's line of sight and the waypoint
-						// (e.g. if the player is on the top floor of a house, and the waypoint is on the bottom floor).
-						// If there is no solid block between the player's line of sight and the waypoint,
-						// then assume that the player was intentionally attempting to click on that waypoint's visible beacon.
-						
-						// hacky workaround for situation where player's line of site goes directly UNDER the waypoint, and through
-						// the solid block below it (this happens a lot)
-						int searchDownStartY = nextLineOfSightPos.getY();
-						if (nextWaypoint.y <= positionVec.y)
-							searchDownStartY += 1;
-						
-						for (int searchDownCounter = searchDownStartY; searchDownCounter >= nextWaypoint.y; searchDownCounter--)
-						{
-							BlockPos nextBlockPos = new BlockPos(nextLineOfSightPos.getX(), searchDownCounter, nextLineOfSightPos.getZ());
-							IBlockState nextBlockDownState = worldIn.getBlockState(nextBlockPos);
-							if (nextBlockDownState.getBlock() == ModBlocks.getBlockWaypoint())
-							{
-								// we found the waypoint
-								clickedWaypointEntry = new WaypointEntry(waypointIndex, nextWaypoint);
-								break lineOfSightLoop;
-							}
-							else if (nextBlockDownState.getMaterial().isSolid())
-							{
-								// We hit a solid block, so the player probably *wasn't* trying to click this waypoint after all.
-								break lineOfSightLoop;
-							}
-						}						
-						// note: it *should* be impossible for code to reach this point, where it never found the waypoint
-					}
-				} // end waypoint loop
-				
-				if (nextLineOfSightBlock.getMaterial().isSolid())
-				{
-					// we hit a solid block.
-					// the next code block after lineOfSightLoop will attempt to add a new waypoint at nextLineOfSightPos current position
-					break lineOfSightLoop; 
-				}
-				
-				lastLineOfSightPos = nextLineOfSightPos;
-			} // end lineOfSightLoop
-			
-			
-			// now that we've finished evaluating the player's line of sight, we'll either attempt to add a new waypoint or remove
-			// an existing waypoint, depending on what we found.
-			
-			if (clickedWaypointEntry == null)
+			if (!playerIn.isSneaking())
 			{
-				// attempt to add a new waypoint entry
+				// player did a normal right click, without the shift key
 				
-				// note: to find the block that the player clicked, we could try to use the final calculated position from 
-				// traversing the line-of-sight vector above, but in practice that doesn't seem to be as precise as a ray trace,
-				// so let's just burn a few extra client cpu cycles to make sure we know *exactly* where the player clicked
-				RayTraceResult rayTraceResult = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(MAX_WAYPOINT_CLICK_DISTANCE, 1.0F);
-				if (rayTraceResult != null)
+				if (currentMode == RecorderMode.ADD_REMOVE)
+					handleRightClick_AddRemoveMode(worldIn, playerIn, handIn);
+				else
 				{
-					BlockPos posClicked = rayTraceResult.getBlockPos();
-					if (posClicked != null)
-					{
-						ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(
-								ModItems.getWaypointRecorder().getUUID(playerIn.getHeldItem(handIn)), 
-								posClicked.getX(),
-								posClicked.getY(),
-								posClicked.getZ()
-						));
-					}
+					// stub - to do!
 				}
-				
 			}
-			else
+		}
+		else
+		{
+			// server side
+			
+			if (playerIn.isSneaking())
 			{
-				// attempt to remove the waypoint that the player clicked on
+				// player shift+right clicked - toggle recorder mode
 				
-				ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), clickedWaypointEntry));
+				String message;
+				if (currentMode == RecorderMode.ADD_REMOVE)
+				{
+					setRecorderMode(recorder, RecorderMode.EDIT);
+					message = recorder.getDisplayName() + " now in Edit Mode";
+				}
+				else
+				{
+					setRecorderMode(recorder, RecorderMode.ADD_REMOVE);
+					message = recorder.getDisplayName() + " now in Add/Remove Mode";
+				}
+				playerIn.sendMessage(new TextComponentString(message));
 			}
 		}
 		
 		return super.onItemRightClick(worldIn, playerIn, handIn);
+	}
+	
+	private void handleRightClick_AddRemoveMode(World worldIn, EntityPlayer playerIn, EnumHand handIn)
+	{
+		// traverse down the player's current line of sight, evaluating each block along the way until one of 3 things happens:
+		//	1. we find a solid block, in which case we'll attempt to add a new waypoint at that spot
+		//	2. we find a block above an existing waypoint, in which case we'll remove that waypoint
+		//	3. we reach the limit defined by MAX_WAYPOINT_CLICK_DISTANCE without either 1 or 2 happening,
+		//	   in which case we attempt to add a waypoint there at the distance limit
+		
+		WaypointEntry clickedWaypointEntry = null;
+		ItemStack recorder = playerIn.getHeldItem(handIn);
+		Waypoint[] waypoints = getWaypoints(recorder);
+		Vec3d lookVec = playerIn.getLookVec();
+		Vec3d positionVec = playerIn.getPositionVector().addVector(0, 2, 0);			
+		BlockPos lastLineOfSightPos = null;
+		
+		// distanceCounterIncrementer: how much unevaluated space to leave between the points that we're about to evaluate along the player's line of sight.
+		// - A value of 1.0D will leave exactly one block of unevaluated space in between each evaluated point.  
+		//   0.5D will leave exactly half a block of unevaluated space between each point.  Etc.
+		// - A smaller value will make it less likely to skip over blocks when the player's line of sight crosses
+		//   the corners where blocks intersect, BUT it will also mean more trips through the loop (which can be mostly mitigated by checking lastLineOfSightPos)
+		double distanceCounterIncrementer = 0.2D;
+		
+		lineOfSightLoop:
+		for (double distanceCounter = 0D; distanceCounter < MAX_WAYPOINT_CLICK_DISTANCE; distanceCounter += 0.2D)
+		{
+			BlockPos nextLineOfSightPos = new BlockPos(positionVec.add(lookVec.scale(distanceCounter)));
+			
+			// don't waste time evaluating the same position twice (which will happen if the distanceCounterIncrementer above is less than 1.0D, for greater accuracy)
+			if (lastLineOfSightPos != null && lastLineOfSightPos.equals(nextLineOfSightPos))
+				continue;
+			
+			IBlockState nextLineOfSightBlock = worldIn.getBlockState(nextLineOfSightPos);
+			
+			// see if any waypoints are below this next block in the player's line of sight
+			for (int waypointIndex = 0; waypointIndex < waypoints.length; waypointIndex++)
+			{
+				Waypoint nextWaypoint = waypoints[waypointIndex];
+
+				//System.out.println("** STUB - " + nextLineOfSightPos.toString() + " vs " + nextWaypoint.getCoordinateString());
+				
+				if (nextWaypoint.x == nextLineOfSightPos.getX() && nextWaypoint.z == nextLineOfSightPos.getZ()/* && nextWaypoint.y <= nextLineOfSightPos.getY()*/)
+				{
+					// Player's line of sight has crossed somewhere above, below, or directly through an existing waypoint.
+
+					// See if there are any solid blocks between player's line of sight and the waypoint
+					// (e.g. if the player is on the top floor of a house, and the waypoint is on the bottom floor).
+					// If there is no solid block between the player's line of sight and the waypoint,
+					// then assume that the player was intentionally attempting to click on that waypoint's visible beacon.
+					
+					// hacky workaround for situation where player's line of site goes directly UNDER the waypoint, and through
+					// the solid block below it (this happens a lot)
+					int searchDownStartY = nextLineOfSightPos.getY();
+					if (nextWaypoint.y <= positionVec.y)
+						searchDownStartY += 1;
+					
+					for (int searchDownCounter = searchDownStartY; searchDownCounter >= nextWaypoint.y; searchDownCounter--)
+					{
+						BlockPos nextBlockPos = new BlockPos(nextLineOfSightPos.getX(), searchDownCounter, nextLineOfSightPos.getZ());
+						IBlockState nextBlockDownState = worldIn.getBlockState(nextBlockPos);
+						if (nextBlockDownState.getBlock() == ModBlocks.getBlockWaypoint())
+						{
+							// we found the waypoint
+							clickedWaypointEntry = new WaypointEntry(waypointIndex, nextWaypoint);
+							break lineOfSightLoop;
+						}
+						else if (nextBlockDownState.getMaterial().isSolid())
+						{
+							// We hit a solid block, so the player probably *wasn't* trying to click this waypoint after all.
+							break lineOfSightLoop;
+						}
+					}						
+					// note: it *should* be impossible for code to reach this point, where it never found the waypoint
+				}
+			} // end waypoint loop
+			
+			if (nextLineOfSightBlock.getMaterial().isSolid())
+			{
+				// we hit a solid block.
+				// the next code block after lineOfSightLoop will attempt to add a new waypoint at nextLineOfSightPos current position
+				break lineOfSightLoop; 
+			}
+			
+			lastLineOfSightPos = nextLineOfSightPos;
+		} // end lineOfSightLoop
+		
+		
+		// now that we've finished evaluating the player's line of sight, we'll either attempt to add a new waypoint or remove
+		// an existing waypoint, depending on what we found.
+		
+		if (clickedWaypointEntry == null)
+		{
+			// attempt to add a new waypoint entry
+			
+			// note: to find the block that the player clicked, we could try to use the final calculated position from 
+			// traversing the line-of-sight vector above, but in practice that doesn't seem to be as precise as a ray trace,
+			// so let's just burn a few extra client cpu cycles to make sure we know *exactly* where the player clicked
+			RayTraceResult rayTraceResult = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(MAX_WAYPOINT_CLICK_DISTANCE, 1.0F);
+			if (rayTraceResult != null)
+			{
+				BlockPos posClicked = rayTraceResult.getBlockPos();
+				if (posClicked != null)
+				{
+					ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(
+							ModItems.getWaypointRecorder().getUUID(playerIn.getHeldItem(handIn)), 
+							posClicked.getX(),
+							posClicked.getY(),
+							posClicked.getZ()
+					));
+				}
+			}
+			
+		}
+		else
+		{
+			// attempt to remove the waypoint that the player clicked on
+			
+			ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), clickedWaypointEntry));
+		}
 	}
 
 	@Override
@@ -270,6 +319,17 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
     		else
     			tooltip.add("uuid: " + stackID.toString());
     	}
+		
+		if (getRecorderMode(stack) == RecorderMode.ADD_REMOVE)
+		{
+			tooltip.add("Right click to add a waypoint. Right click again to remove it.");
+			tooltip.add("Sneak + right click for Edit Mode");
+		}
+		else
+		{
+			tooltip.add("Right click two waypoints to swap their #'s");
+			tooltip.add("Sneak + right click for Add/Remove Mode");
+		}
     	
 		tooltip.add(Integer.toString(getWaypointCount(stack)) + " waypoints");
 		if (Reference.DEBUG)
@@ -422,7 +482,49 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		}
 	}
 
+	public RecorderMode getRecorderMode(ItemStack stack)
+	{
+		if (!stack.hasTagCompound())
+			return RecorderMode.ADD_REMOVE;
+		
+		NBTTagCompound nbtTag = stack.getTagCompound();
+		if (nbtTag.hasKey(ITEMSTACK_RECORDER_MODE_TAG_KEY))
+			return modeFromString(nbtTag.getString(ITEMSTACK_RECORDER_MODE_TAG_KEY));
+		else
+			return RecorderMode.ADD_REMOVE;
+	}
 	
+	public void setRecorderMode(ItemStack stack, RecorderMode mode)
+	{
+		if (!stack.hasTagCompound())
+			stack.setTagCompound(new NBTTagCompound());
+		
+		NBTTagCompound nbtTag = stack.getTagCompound();
+		nbtTag.setString(ITEMSTACK_RECORDER_MODE_TAG_KEY, stringFromMode(mode));
+	}
+	
+	private RecorderMode modeFromString(String s)
+	{
+		if (s == "A")
+			return RecorderMode.ADD_REMOVE;
+		else
+			return RecorderMode.EDIT;
+	}
+	
+	private String stringFromMode(RecorderMode r)
+	{
+		if (r == RecorderMode.ADD_REMOVE)
+			return "A";
+		else
+			return "E";
+	}
+	
+	
+	public enum RecorderMode
+	{
+		ADD_REMOVE,
+		EDIT
+	}
 }
 
 

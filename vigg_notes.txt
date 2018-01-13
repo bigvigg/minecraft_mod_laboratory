@@ -29,5 +29,6 @@ Item.getNBTShareTag()
 
     - add shift+rightclick to change mode on recorder.  2nd mode to right click 2 waypoints and swap their index
             
+    - change the lores and sendMessages in the ItemWaypointRecorder class to use localization, instead of hard-coded english strings
         
     
