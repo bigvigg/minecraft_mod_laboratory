@@ -20,8 +20,6 @@ Item.getNBTShareTag()
         
     - set a cap on max # of waypoints (ignore new waypoints and show message when right click after cap reached)    
 
-    - if duplicate waypoint clicked, then delete
-    
             
         
     

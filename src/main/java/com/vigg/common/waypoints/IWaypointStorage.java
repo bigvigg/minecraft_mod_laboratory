@@ -2,6 +2,9 @@ package com.vigg.common.waypoints;
 
 import java.util.List;
 
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.common.util.INBTSerializable;
+
 // T is the type of the object that IWaypointStorage is implemented on
 public interface IWaypointStorage<T> 
 {
@@ -18,7 +21,7 @@ public interface IWaypointStorage<T>
 	
 	public WaypointEntry getWaypoint(T container, int x, int y, int z);
 	
-	public class WaypointEntry
+	public class WaypointEntry implements INBTSerializable<NBTTagCompound>
 	{
 		public int index;
 		public Waypoint waypoint;
@@ -31,6 +34,25 @@ public interface IWaypointStorage<T>
 		{	
 			index = parIndex;
 			waypoint = parWaypoint;
+		}
+		
+		
+		@Override
+		public NBTTagCompound serializeNBT() 
+		{
+			NBTTagCompound nbt = new NBTTagCompound();
+			nbt.setInteger("index", index);
+			nbt.setTag("waypoint", waypoint.serializeNBT());
+			return nbt;
+		}
+
+		@Override
+		public void deserializeNBT(NBTTagCompound nbt) 
+		{
+			index = nbt.getInteger("index");
+			
+			waypoint = new Waypoint();
+			waypoint.deserializeNBT(nbt.getCompoundTag("waypoint"));
 		}
 	}
 }

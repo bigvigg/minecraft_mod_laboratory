@@ -3,7 +3,8 @@ package com.vigg.common.waypoints;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.common.util.INBTSerializable;
 
-public class Waypoint implements INBTSerializable<NBTTagCompound> {
+public class Waypoint implements INBTSerializable<NBTTagCompound> 
+{
 
 	public int x, y, z;
 	
@@ -62,7 +63,20 @@ public class Waypoint implements INBTSerializable<NBTTagCompound> {
 		this.z = nbt.getInteger("z");
 		
 		if (nbt.hasKey("label"))
-			this.setLabel(nbt.getString("label"));
+			this.setLabel(nbt.getString("label"));		
 	}
 	
+	@Override
+	public boolean equals (Object obj)
+	{
+		if (obj == this)
+			return true;
+		else if (obj instanceof Waypoint)
+		{
+			Waypoint wp = (Waypoint)obj;
+			return (wp.x == this.x && wp.y == this.y && wp.z == this.z);
+		}
+		else
+			return super.equals(obj);
+	}
 }

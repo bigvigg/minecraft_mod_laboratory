@@ -32,8 +32,9 @@ import net.minecraftforge.common.util.Constants;
 
 public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemStack>
 {
-	public final static String ITEMSTACK_UUID_TAG_KEY = "com.vigg.uuid";
-	public final static String ITEMSTACK_WAYPOINTS_TAG_KEY = "com.vigg.waypoints";
+	private final static String ITEMSTACK_UUID_TAG_KEY = "com.vigg.uuid";
+	private final static String ITEMSTACK_WAYPOINTS_TAG_KEY = "com.vigg.waypoints";
+	private final static double MAX_WAYPOINT_CLICK_DISTANCE = 50D;
 		
 	public ItemWaypointRecorder() 
 	{
@@ -66,28 +67,65 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		if (worldIn.isRemote)
 		{
 			// STUB - testing
+			WaypointEntry clickedWaypointEntry = null;
+			ItemStack recorder = playerIn.getHeldItem(handIn);
+			Waypoint[] waypoints = getWaypoints(recorder);
 			Vec3d lookVec = playerIn.getLookVec();
 			Vec3d positionVec = playerIn.getPositionVector();
-			IBlockState newState = Blocks.GOLD_BLOCK.getDefaultState();
-			for (double i = 0D; i < 50D; i++)
+			
+			BlockPos nextLineOfSightPos = null;
+			lineOfSightLoop:
+			for (double distanceCounter = 0D; distanceCounter < MAX_WAYPOINT_CLICK_DISTANCE; distanceCounter++)
 			{
-				BlockPos nextPos = new BlockPos(positionVec.add(lookVec.scale(i)));
-				IBlockState nextBlock = worldIn.getBlockState(nextPos);
+				nextLineOfSightPos = new BlockPos(positionVec.add(lookVec.scale(distanceCounter)));
+				IBlockState nextLineOfSightBlock = worldIn.getBlockState(nextLineOfSightPos);
+								
+				if (nextLineOfSightBlock.getMaterial().isSolid())
+				{
+					// we hit a solid block.
+					// the next code block after lineOfSightLoop will attempt to add a new waypoint at nextLineOfSightPos current position
+					break lineOfSightLoop; 
+				}
 				
-				worldIn.setBlockState(nextPos, newState);
-			}
+				// see if any waypoints are below this next block in the player's line of sight
+				for (int waypointIndex = 0; waypointIndex < waypoints.length; waypointIndex++)
+				{
+					Waypoint nextWaypoint = waypoints[waypointIndex];
+					
+					if (nextWaypoint.x == nextLineOfSightPos.getX() && nextWaypoint.z == nextLineOfSightPos.getZ() && nextWaypoint.y <= nextLineOfSightPos.getY())
+					{
+						// Player's line of sight has crossed somewhere above an existing waypoint.
+						//
+						// See if there are any solid blocks between player's line of sight and the waypoint
+						// (e.g. if the player is on the top floor of a house, and the waypoint is on the bottom floor).
+						// If there is no solid block between the player's line of sight and the waypoint,
+						// then assume that the player was intentionally attempting to click on that waypoint's visible beacon.
+						for (int lineOfSightToWaypointCounter = nextLineOfSightPos.getY(); lineOfSightToWaypointCounter >= nextWaypoint.y; lineOfSightToWaypointCounter--)
+						{
+							if (worldIn.getBlockState(new BlockPos(nextLineOfSightPos.getX(), lineOfSightToWaypointCounter, nextLineOfSightPos.getZ())).getMaterial().isSolid())
+							{
+								// We hit a solid block, so the player probably *wasn't* trying to click this waypoint after all.
+								break;
+							}
+						}
+						
+						// assume that the player was trying to click on this waypoint beacon
+						clickedWaypointEntry = new WaypointEntry(waypointIndex, nextWaypoint);
+						break lineOfSightLoop;
+					}
+				}
+			} // end LineOfSightLoop
 			
-			//...
 			
-			RayTraceResult objectClicked = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(100, 1.0F);
-			if (objectClicked != null/* && objectClicked.sideHit == EnumFacing.UP*/)
+			
+			if (clickedWaypointEntry == null)
 			{
-				BlockPos posClicked = objectClicked.getBlockPos();
+				// attempt to add a new waypoint entry
 				
 				// try a few different spots, and put the waypoint on the first one that meets the conditions
 				BlockPos[] possibleWaypointPositions = new BlockPos[] {
-						posClicked,					// first try to place at the actual position clicked (example: player clicks on tall grass)
-						posClicked.add(0, 1, 0)		// then try to place above the clicked position (example: player clicks on the ground)
+						nextLineOfSightPos,					// first try to place at the actual position clicked (example: player clicks on tall grass)
+						nextLineOfSightPos.add(0, 1, 0)		// then try to place above the clicked position (example: player clicks on the ground)
 				};
 				for (BlockPos possiblePos : possibleWaypointPositions)
 				{
@@ -113,8 +151,11 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 						}
 					}
 				}
-				
-				
+			}
+			else
+			{
+				// the player clicked on an existing waypoint
+				ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), clickedWaypointEntry));
 			}
 		}
 		
