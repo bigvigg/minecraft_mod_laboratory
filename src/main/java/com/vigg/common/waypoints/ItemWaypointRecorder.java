@@ -12,6 +12,7 @@ import com.vigg.common.Reference;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
@@ -31,14 +32,80 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.Side;
 
+@Mod.EventBusSubscriber
 public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemStack>
 {
+	// static stuff
+	
 	private final static String ITEMSTACK_UUID_TAG_KEY = "com.vigg.uuid";
 	private final static String ITEMSTACK_WAYPOINTS_TAG_KEY = "com.vigg.waypoints";
 	private final static String ITEMSTACK_RECORDER_MODE_TAG_KEY = "com.vigg.recordermode";
 	private final static double MAX_WAYPOINT_CLICK_DISTANCE = 50D;
+	
+	private static UUID lastTickRecorderUUID = null;
+	
+	
+	@SubscribeEvent
+	public static void onClientTick(TickEvent.ClientTickEvent e)
+	{
+		// sanity check
+		if (e.side != Side.CLIENT)
+			return;
 		
+		// Whenever a recorder is selected in the player's hand, show them a message to remind them what mode it's in.
+		// (it's weird that I can't find any sort of ItemSelected event hook, and instead have to do it this way, by checking every tick)
+		
+		ItemWaypointRecorder itemRecorder = ModItems.getWaypointRecorder();
+		EntityPlayerSP player = Minecraft.getMinecraft().player;
+		
+		if (player != null)
+		{
+			ItemStack heldItem = player.getHeldItemMainhand();
+			
+			if (heldItem == null)
+				lastTickRecorderUUID = null;
+			else if (heldItem.getItem() == itemRecorder)
+			{
+				UUID currentUUID = itemRecorder.getUUID(heldItem);
+
+				if (currentUUID != null && (lastTickRecorderUUID == null || !currentUUID.equals(lastTickRecorderUUID)))
+				{
+					showModeMessage(player, heldItem, itemRecorder.getRecorderMode(heldItem));
+				}
+				
+				lastTickRecorderUUID = currentUUID;
+			}
+			else
+				lastTickRecorderUUID = null;
+		}
+	}
+	
+	private static void showModeMessage(EntityPlayer player, ItemStack recorder, RecorderMode mode)
+	{
+		String message;
+		
+		if (mode == RecorderMode.ADD_REMOVE)
+		{
+			message = recorder.getDisplayName() + " is in Add/Remove Mode";
+		}
+		else
+		{
+			message = recorder.getDisplayName() + " is in Edit Mode";
+		}
+		
+		player.sendMessage(new TextComponentString(message));
+	}
+	
+	
+	
+	// instance (non-static) stuff
+	
+	
 	public ItemWaypointRecorder() 
 	{
 	    super();
@@ -82,7 +149,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 					handleRightClick_AddRemoveMode(worldIn, playerIn, handIn);
 				else
 				{
-					// stub - to do!
+					handleRightClick_EditMode(worldIn, playerIn, handIn);
 				}
 			}
 		}
@@ -94,25 +161,63 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			{
 				// player shift+right clicked - toggle recorder mode
 				
-				String message;
+				RecorderMode newMode;
 				if (currentMode == RecorderMode.ADD_REMOVE)
-				{
-					setRecorderMode(recorder, RecorderMode.EDIT);
-					message = recorder.getDisplayName() + " now in Edit Mode";
-				}
+					newMode = RecorderMode.EDIT;
 				else
-				{
-					setRecorderMode(recorder, RecorderMode.ADD_REMOVE);
-					message = recorder.getDisplayName() + " now in Add/Remove Mode";
-				}
-				playerIn.sendMessage(new TextComponentString(message));
+					newMode = RecorderMode.ADD_REMOVE;
+				
+				setRecorderMode(recorder, newMode);
+				showModeMessage(playerIn, recorder, newMode);
 			}
 		}
 		
 		return super.onItemRightClick(worldIn, playerIn, handIn);
 	}
 	
+	
 	private void handleRightClick_AddRemoveMode(World worldIn, EntityPlayer playerIn, EnumHand handIn)
+	{
+		ItemStack recorder = playerIn.getHeldItem(handIn);
+		WaypointEntry clickedWaypointEntry = getWaypointClicked(playerIn);
+
+		if (clickedWaypointEntry == null)
+		{
+			// attempt to add a new waypoint entry
+			
+			// note: to find the block that the player clicked, we could try to use the final calculated position from 
+			// traversing the line-of-sight vector, but in practice that doesn't seem to be as precise as a ray trace,
+			// so let's just burn a few extra client cpu cycles to make sure we know *exactly* where the player clicked
+			RayTraceResult rayTraceResult = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(MAX_WAYPOINT_CLICK_DISTANCE, 1.0F);
+			if (rayTraceResult != null)
+			{
+				BlockPos posClicked = rayTraceResult.getBlockPos();
+				if (posClicked != null)
+				{
+					ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(
+							ModItems.getWaypointRecorder().getUUID(playerIn.getHeldItem(handIn)), 
+							posClicked.getX(),
+							posClicked.getY(),
+							posClicked.getZ()
+					));
+				}
+			}
+			
+		}
+		else
+		{
+			// attempt to remove the waypoint that the player clicked on
+			
+			ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), clickedWaypointEntry));
+		}
+	}
+
+	private void handleRightClick_EditMode(World worldIn, EntityPlayer playerIn, EnumHand handIn)
+	{
+		
+	}
+	
+	private WaypointEntry getWaypointClicked(EntityPlayer playerIn)
 	{
 		// traverse down the player's current line of sight, evaluating each block along the way until one of 3 things happens:
 		//	1. we find a solid block, in which case we'll attempt to add a new waypoint at that spot
@@ -121,10 +226,10 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		//	   in which case we attempt to add a waypoint there at the distance limit
 		
 		WaypointEntry clickedWaypointEntry = null;
-		ItemStack recorder = playerIn.getHeldItem(handIn);
+		ItemStack recorder = playerIn.getHeldItemMainhand();
 		Waypoint[] waypoints = getWaypoints(recorder);
 		Vec3d lookVec = playerIn.getLookVec();
-		Vec3d positionVec = playerIn.getPositionVector().addVector(0, 2, 0);			
+		Vec3d positionVec = playerIn.getPositionVector().addVector(0, 1, 0);			
 		BlockPos lastLineOfSightPos = null;
 		
 		// distanceCounterIncrementer: how much unevaluated space to leave between the points that we're about to evaluate along the player's line of sight.
@@ -143,7 +248,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			if (lastLineOfSightPos != null && lastLineOfSightPos.equals(nextLineOfSightPos))
 				continue;
 			
-			IBlockState nextLineOfSightBlock = worldIn.getBlockState(nextLineOfSightPos);
+			IBlockState nextLineOfSightBlock = playerIn.world.getBlockState(nextLineOfSightPos);
 			
 			// see if any waypoints are below this next block in the player's line of sight
 			for (int waypointIndex = 0; waypointIndex < waypoints.length; waypointIndex++)
@@ -170,7 +275,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 					for (int searchDownCounter = searchDownStartY; searchDownCounter >= nextWaypoint.y; searchDownCounter--)
 					{
 						BlockPos nextBlockPos = new BlockPos(nextLineOfSightPos.getX(), searchDownCounter, nextLineOfSightPos.getZ());
-						IBlockState nextBlockDownState = worldIn.getBlockState(nextBlockPos);
+						IBlockState nextBlockDownState = playerIn.world.getBlockState(nextBlockPos);
 						if (nextBlockDownState.getBlock() == ModBlocks.getBlockWaypoint())
 						{
 							// we found the waypoint
@@ -197,41 +302,9 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			lastLineOfSightPos = nextLineOfSightPos;
 		} // end lineOfSightLoop
 		
-		
-		// now that we've finished evaluating the player's line of sight, we'll either attempt to add a new waypoint or remove
-		// an existing waypoint, depending on what we found.
-		
-		if (clickedWaypointEntry == null)
-		{
-			// attempt to add a new waypoint entry
-			
-			// note: to find the block that the player clicked, we could try to use the final calculated position from 
-			// traversing the line-of-sight vector above, but in practice that doesn't seem to be as precise as a ray trace,
-			// so let's just burn a few extra client cpu cycles to make sure we know *exactly* where the player clicked
-			RayTraceResult rayTraceResult = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(MAX_WAYPOINT_CLICK_DISTANCE, 1.0F);
-			if (rayTraceResult != null)
-			{
-				BlockPos posClicked = rayTraceResult.getBlockPos();
-				if (posClicked != null)
-				{
-					ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(
-							ModItems.getWaypointRecorder().getUUID(playerIn.getHeldItem(handIn)), 
-							posClicked.getX(),
-							posClicked.getY(),
-							posClicked.getZ()
-					));
-				}
-			}
-			
-		}
-		else
-		{
-			// attempt to remove the waypoint that the player clicked on
-			
-			ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), clickedWaypointEntry));
-		}
+		return clickedWaypointEntry;
 	}
-
+	
 	@Override
 	public boolean onLeftClickEntity(ItemStack stack, EntityPlayer player, Entity entity) 
 	{
@@ -484,14 +557,20 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 
 	public RecorderMode getRecorderMode(ItemStack stack)
 	{
-		if (!stack.hasTagCompound())
-			return RecorderMode.ADD_REMOVE;
+		RecorderMode mode;
 		
-		NBTTagCompound nbtTag = stack.getTagCompound();
-		if (nbtTag.hasKey(ITEMSTACK_RECORDER_MODE_TAG_KEY))
-			return modeFromString(nbtTag.getString(ITEMSTACK_RECORDER_MODE_TAG_KEY));
+		if (!stack.hasTagCompound())
+			mode = RecorderMode.ADD_REMOVE;
 		else
-			return RecorderMode.ADD_REMOVE;
+		{
+			NBTTagCompound nbtTag = stack.getTagCompound();
+			if (nbtTag.hasKey(ITEMSTACK_RECORDER_MODE_TAG_KEY))
+				mode = modeFromString(nbtTag.getString(ITEMSTACK_RECORDER_MODE_TAG_KEY));
+			else
+				mode = RecorderMode.ADD_REMOVE;
+		}
+
+		return mode;
 	}
 	
 	public void setRecorderMode(ItemStack stack, RecorderMode mode)
@@ -505,10 +584,14 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	
 	private RecorderMode modeFromString(String s)
 	{
-		if (s == "A")
-			return RecorderMode.ADD_REMOVE;
+		RecorderMode mode;
+		
+		if (s.equals("A"))
+			mode = RecorderMode.ADD_REMOVE;
 		else
-			return RecorderMode.EDIT;
+			mode = RecorderMode.EDIT;
+		
+		return mode;
 	}
 	
 	private String stringFromMode(RecorderMode r)
