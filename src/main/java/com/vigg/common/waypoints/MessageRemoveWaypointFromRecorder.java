@@ -72,7 +72,6 @@ public class MessageRemoveWaypointFromRecorder implements IMessage
         				
 				    	if (heldItem != null && heldItem.getItem() == itemWaypointRecorder && message.recorderUUID.equals(itemWaypointRecorder.getUUID(heldItem)))
 				    	{
-				    		//List<Waypoint> waypoints = Arrays.asList(itemWaypointRecorder.getWaypoints(heldItem));
 				    		List<Waypoint> waypoints = new LinkedList<Waypoint>(Arrays.asList(itemWaypointRecorder.getWaypoints(heldItem)));
 				    		
 				    		if (waypoints.size() > message.waypointEntry.index && waypoints.get(message.waypointEntry.index).equals(message.waypointEntry.waypoint))

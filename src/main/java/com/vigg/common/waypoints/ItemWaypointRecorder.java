@@ -103,26 +103,24 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			// client side
 			
 			
-			RecorderMode currentMode = getRecorderMode(recorder);
-
 			if (playerIn.isSneaking())
 			{
 				// player shift+right clicked - toggle recorder mode
 				
 				RecorderMode newMode;
-				if (currentMode == RecorderMode.ADD_REMOVE)
+				if (ClientStateManager.selectedMode == RecorderMode.ADD_REMOVE)
 					newMode = RecorderMode.EDIT;
 				else
 					newMode = RecorderMode.ADD_REMOVE;
 				
-				setRecorderMode(recorder, newMode);
+				ClientStateManager.selectedMode = newMode;
 				showModeMessage(playerIn, recorder, newMode);
 			}
 			else
 			{
 				// player did a normal right click, without the shift key
 				
-				if (currentMode == RecorderMode.ADD_REMOVE)
+				if (ClientStateManager.selectedMode == RecorderMode.ADD_REMOVE)
 					handleRightClick_AddRemoveMode(worldIn, playerIn, handIn);
 				else
 				{
@@ -181,7 +179,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 
 		if (clickedWaypointEntry != null)
 		{
-			this.setSelectedWaypointIndex(recorder, clickedWaypointEntry.index);
+			ClientStateManager.selectedWaypointIndex = clickedWaypointEntry.index;
 		}
 	}
 	
@@ -210,7 +208,6 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		
 		WaypointEntry clickedWaypointEntry = null;
 		ItemStack recorder = playerIn.getHeldItemMainhand();
-		Waypoint[] waypoints = getWaypoints(recorder);
 		Vec3d lookVec = playerIn.getLookVec();
 		Vec3d positionVec = playerIn.getPositionVector().addVector(0, 1, 0);			
 		BlockPos lastLineOfSightPos = null;
@@ -234,9 +231,9 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			IBlockState nextLineOfSightBlock = playerIn.world.getBlockState(nextLineOfSightPos);
 			
 			// see if any waypoints are below this next block in the player's line of sight
-			for (int waypointIndex = 0; waypointIndex < waypoints.length; waypointIndex++)
+			for (int waypointIndex = 0; waypointIndex < ClientStateManager.heldRecorderWaypoints.length; waypointIndex++)
 			{
-				Waypoint nextWaypoint = waypoints[waypointIndex];
+				Waypoint nextWaypoint = ClientStateManager.heldRecorderWaypoints[waypointIndex];
 
 				//System.out.println("** STUB - " + nextLineOfSightPos.toString() + " vs " + nextWaypoint.getCoordinateString());
 				
@@ -327,14 +324,12 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			
 			if (isSelected)
 			{
-				Waypoint[] waypoints = getWaypoints(stack);
-				
 				// Make sure the BlockWaypoint is spawned for each current waypoint.
 				// Since these waypoint blocks are 100% just-for-looks and do not interact with anything in the world,
 				// I'm gonna go against common wisdom and create them *only* on the client side.
-				for (int i = 0; i < waypoints.length; i++)
+				for (int i = 0; i < ClientStateManager.heldRecorderWaypoints.length; i++)
 				{
-					Waypoint wp = waypoints[i];
+					Waypoint wp = ClientStateManager.heldRecorderWaypoints[i];
 					BlockPos pos = new BlockPos(wp.x, wp.y, wp.z);
 					IBlockState waypointState = ModBlocks.getBlockWaypoint().getDefaultState();
 					
@@ -376,15 +371,18 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
     			tooltip.add("uuid: " + stackID.toString());
     	}
 		
-		if (getRecorderMode(stack) == RecorderMode.ADD_REMOVE)
+		if (worldIn != null && worldIn.isRemote)
 		{
-			tooltip.add("Right click to add a waypoint. Right click again to remove it.");
-			tooltip.add("Sneak + right click for Edit Mode");
-		}
-		else
-		{
-			tooltip.add("Right click two waypoints to swap their #'s");
-			tooltip.add("Sneak + right click for Add/Remove Mode");
+			if (ClientStateManager.selectedMode == RecorderMode.ADD_REMOVE)
+			{
+				tooltip.add("Right click to add a waypoint. Right click again to remove it.");
+				tooltip.add("Sneak + right click for Edit Mode");
+			}
+			else
+			{
+				tooltip.add("Right click two waypoints to swap their #'s");
+				tooltip.add("Sneak + right click for Add/Remove Mode");
+			}
 		}
     	
 		tooltip.add(Integer.toString(getWaypointCount(stack)) + " waypoints");
@@ -563,92 +561,6 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 			System.out.println("STUB GENERATING UUID");
 			nbtTag.setString(ITEMSTACK_UUID_TAG_KEY, UUID.randomUUID().toString());
 		}
-	}
-	
-	
-	
-	// selected waypoint stuff
-	
-	@SideOnly(Side.CLIENT)
-	public int getSelectedWaypointIndex(ItemStack stack)
-	{
-		int selectedIndex = -1;
-
-		if (stack.hasTagCompound())
-		{
-			NBTTagCompound nbtTag = stack.getTagCompound();
-			if (nbtTag.hasKey(ITEMSTACK_RECORDER_SELECTED_WAYPOINT_INDEX_TAG_KEY))
-			{
-				selectedIndex = nbtTag.getInteger(ITEMSTACK_RECORDER_SELECTED_WAYPOINT_INDEX_TAG_KEY);
-			}
-		}
-
-		return selectedIndex;
-	}
-	
-	@SideOnly(Side.CLIENT)
-	public void setSelectedWaypointIndex(ItemStack stack, int waypointIndex)
-	{
-		if (!stack.hasTagCompound())
-			stack.setTagCompound(new NBTTagCompound());
-		
-		NBTTagCompound nbtTag = stack.getTagCompound();
-		nbtTag.setInteger(ITEMSTACK_RECORDER_SELECTED_WAYPOINT_INDEX_TAG_KEY, waypointIndex);
-	}
-	
-	
-	
-	// recorder mode stuff
-	
-	@SideOnly(Side.CLIENT)
-	public RecorderMode getRecorderMode(ItemStack stack)
-	{
-		RecorderMode mode;
-		
-		if (!stack.hasTagCompound())
-			mode = RecorderMode.ADD_REMOVE;
-		else
-		{
-			NBTTagCompound nbtTag = stack.getTagCompound();
-			if (nbtTag.hasKey(ITEMSTACK_RECORDER_MODE_TAG_KEY))
-				mode = modeFromString(nbtTag.getString(ITEMSTACK_RECORDER_MODE_TAG_KEY));
-			else
-				mode = RecorderMode.ADD_REMOVE;
-		}
-
-		return mode;
-	}
-	
-	@SideOnly(Side.CLIENT)
-	public void setRecorderMode(ItemStack stack, RecorderMode mode)
-	{
-		if (!stack.hasTagCompound())
-			stack.setTagCompound(new NBTTagCompound());
-		
-		NBTTagCompound nbtTag = stack.getTagCompound();
-		nbtTag.setString(ITEMSTACK_RECORDER_MODE_TAG_KEY, stringFromMode(mode));
-	}
-	
-	@SideOnly(Side.CLIENT)
-	private RecorderMode modeFromString(String s)
-	{
-		RecorderMode mode;
-		
-		if (s.equals("A"))
-			mode = RecorderMode.ADD_REMOVE;
-		else
-			mode = RecorderMode.EDIT;
-		
-		return mode;
-	}
-	
-	@SideOnly(Side.CLIENT)
-	private String stringFromMode(RecorderMode r)
-	{
-		if (r == RecorderMode.ADD_REMOVE)
-			return "A";
-		else
-			return "E";
 	}
 	
 	public enum RecorderMode

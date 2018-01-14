@@ -2,30 +2,20 @@ package com.vigg.common.waypoints;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.vigg.common.ModItems;
+import com.vigg.common.waypoints.IWaypointStorage.WaypointEntry;
 
-import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockStainedGlass;
-import net.minecraft.block.BlockStainedGlassPane;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
-import net.minecraft.init.MobEffects;
 import net.minecraft.item.EnumDyeColor;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTUtil;
-import net.minecraft.potion.Potion;
-import net.minecraft.potion.PotionEffect;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -109,7 +99,17 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
 					selfDestruct();
 				else
 				{
-					IWaypointStorage.WaypointEntry waypointEntry = recorder.getWaypoint(heldItem, pos.getX(), pos.getY(), pos.getZ());
+					// see if we can find a Waypoint with our current location
+					WaypointEntry waypointEntry = null;
+					for (int i = 0; i < ClientStateManager.heldRecorderWaypoints.length; i++)
+					{
+						Waypoint wp = ClientStateManager.heldRecorderWaypoints[i];
+						if (wp.x == pos.getX() && wp.y == pos.getY() && wp.z == pos.getZ())
+						{
+							waypointEntry = new WaypointEntry(i, wp);
+							break;
+						}
+					}
 					
 					if (waypointEntry == null)
 						selfDestruct();
@@ -119,8 +119,7 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
 						
 						String newName = "#" + Integer.toString(waypointEntry.index + 1) + " " + waypointEntry.waypoint.getLabel();
 						
-						int selectedWaypointIndex = recorder.getSelectedWaypointIndex(heldItem);
-						if (waypointEntry.index == selectedWaypointIndex)
+						if (waypointEntry.index == ClientStateManager.selectedWaypointIndex && ClientStateManager.selectedMode == ItemWaypointRecorder.RecorderMode.EDIT)
 							this.beamColor = EnumDyeColor.LIME;
 						else
 							this.beamColor = EnumDyeColor.WHITE;

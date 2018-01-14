@@ -37,6 +37,12 @@ public class BlockWaypoint extends BlockContainer
 	@Override
     public TileEntity createNewTileEntity(World worldIn, int meta)
     {
+		// sanity check.  
+		// TileEntityWaypoint uses ClientStateManager in its renderer, so it will probably
+		// crash the server if a TileEntityWaypoint is ever actually created on the server somehow.
+		if (!worldIn.isRemote) 
+			return null;
+		
         return new TileEntityWaypoint();
     }
 	
