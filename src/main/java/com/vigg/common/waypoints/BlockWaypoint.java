@@ -83,11 +83,13 @@ public class BlockWaypoint extends BlockContainer
         super.onBlockPlacedBy(worldIn, pos, state, placer, stack);
 
         // make the beacon start rendering
+        /*
         TileEntity tileentity = worldIn.getTileEntity(pos);
         if (tileentity instanceof TileEntityWaypoint)
         {
             ((TileEntityWaypoint)tileentity).updateBeacon();
         }
+        */
     }
 	
     @SideOnly(Side.CLIENT)

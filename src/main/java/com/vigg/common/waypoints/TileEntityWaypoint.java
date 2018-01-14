@@ -42,6 +42,7 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
 	private UUID recorderUUID = null;
 	private EntityPlayer player = null;
 	private IBlockState originalState = null;
+	private EnumDyeColor beamColor = EnumDyeColor.WHITE;
 	
     // properties copied from TileEntityBeacon:
     private final List<TileEntityWaypoint.BeamSegment> beamSegments = Lists.<TileEntityWaypoint.BeamSegment>newArrayList();
@@ -117,11 +118,15 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
 						// update beacon display with latest waypoint data
 						
 						String newName = "#" + Integer.toString(waypointEntry.index + 1) + " " + waypointEntry.waypoint.getLabel();
-						if (getName() != newName)
-						{
-							this.setName(newName);
-							this.updateBeacon();
-						}
+						
+						int selectedWaypointIndex = recorder.getSelectedWaypointIndex(heldItem);
+						if (waypointEntry.index == selectedWaypointIndex)
+							this.beamColor = EnumDyeColor.LIME;
+						else
+							this.beamColor = EnumDyeColor.WHITE;
+								
+						this.setName(newName);
+						this.updateBeacon();
 					}
 				}
 			}
@@ -143,7 +148,7 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
         int j = this.pos.getY();
         int k = this.pos.getZ();
         this.beamSegments.clear();
-        TileEntityWaypoint.BeamSegment tileentitybeacon$beamsegment = new TileEntityWaypoint.BeamSegment(EnumDyeColor.WHITE.getColorComponentValues());
+        TileEntityWaypoint.BeamSegment tileentitybeacon$beamsegment = new TileEntityWaypoint.BeamSegment(beamColor.getColorComponentValues());
         this.beamSegments.add(tileentitybeacon$beamsegment);
         boolean flag = true;
         BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();

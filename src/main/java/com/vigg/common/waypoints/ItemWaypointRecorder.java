@@ -12,7 +12,6 @@ import com.vigg.common.Reference;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
@@ -32,9 +31,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
@@ -185,10 +181,24 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 
 		if (clickedWaypointEntry != null)
 		{
-			this.setSelectedWaypoint(recorder, clickedWaypointEntry.index);
+			this.setSelectedWaypointIndex(recorder, clickedWaypointEntry.index);
 		}
 	}
 	
+	// NOTE: this function doesn't ever seem to actually get called, even though it seems like it SHOULD
+	// be getting called, according to the vanilla code
+	/*
+	@Override
+	public boolean updateItemStackNBT(NBTTagCompound nbt) {
+		System.out.println("** STUB2 updateItemStackNBT " + nbt.toString());
+		return true;
+
+		// TODO Auto-generated method stub
+		//return super.updateItemStackNBT(nbt);
+	}
+	*/
+
+
 	@SideOnly(Side.CLIENT)
 	private WaypointEntry getTargetedWaypoint(EntityPlayer playerIn)
 	{
@@ -560,7 +570,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	// selected waypoint stuff
 	
 	@SideOnly(Side.CLIENT)
-	private int getSelectedWaypointIndex(ItemStack stack)
+	public int getSelectedWaypointIndex(ItemStack stack)
 	{
 		int selectedIndex = -1;
 
@@ -577,7 +587,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	}
 	
 	@SideOnly(Side.CLIENT)
-	private void setSelectedWaypoint(ItemStack stack, int waypointIndex)
+	public void setSelectedWaypointIndex(ItemStack stack, int waypointIndex)
 	{
 		if (!stack.hasTagCompound())
 			stack.setTagCompound(new NBTTagCompound());
