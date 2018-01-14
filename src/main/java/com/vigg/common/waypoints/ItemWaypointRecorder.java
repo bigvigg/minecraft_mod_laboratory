@@ -177,9 +177,22 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		ItemStack recorder = playerIn.getHeldItem(handIn);
 		WaypointEntry clickedWaypointEntry = getTargetedWaypoint(playerIn);
 
-		if (clickedWaypointEntry != null)
+		if (clickedWaypointEntry == null)
 		{
-			ClientStateManager.selectedWaypointIndex = clickedWaypointEntry.index;
+			
+		}
+		else
+		{
+			if (ClientStateManager.selectedWaypointIndex == -1)
+				ClientStateManager.selectedWaypointIndex = clickedWaypointEntry.index; // select the clicked waypoint
+			else if (ClientStateManager.selectedWaypointIndex == clickedWaypointEntry.index)
+				ClientStateManager.selectedWaypointIndex = -1; // clicked on same waypoint twice: deselect it
+			else
+			{
+				// swap the two waypoints
+				ModPacketHandler.INSTANCE.sendToServer(new MessageSwapWaypointsOnRecorder(getUUID(recorder), ClientStateManager.selectedWaypointIndex, clickedWaypointEntry.index));
+				ClientStateManager.selectedWaypointIndex = -1;
+			}
 		}
 	}
 	

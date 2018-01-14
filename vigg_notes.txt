@@ -21,7 +21,7 @@ Item.getNBTShareTag()
         - additional cost to make the mob keep its inventory instead of dropping it where it died
       
 - next to do:
-
+    
     - add property to Waypoint to track what world it's in
         + add validation to server to make sure all waypoints are in same world when adding a new waypoint
         

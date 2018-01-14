@@ -69,17 +69,7 @@ public class MessageAddWaypointToRecorder implements IMessage
 				{
         			@Override
         			public void run() 
-				    {
-        				/*
-        				ItemStack heldItem = player.getHeldItemMainhand();
-        				ItemWaypointRecorder itemWaypointRecorder = ModItems.getWaypointRecorder();
-        				
-				    	if (heldItem != null && heldItem.getItem() == itemWaypointRecorder && message.recorderUUID.equals(itemWaypointRecorder.getUUID(heldItem)))
-				    	{
-				    		itemWaypointRecorder.addWaypoint(heldItem, message.waypoint);
-				    	}
-				    	*/
-        				
+				    {	
         				BlockPos nextLineOfSightPos = new BlockPos(message.x, message.y, message.z);
         				
         				// try a couple different spots, and put the waypoint on the first one that meets the conditions.
@@ -103,7 +93,7 @@ public class MessageAddWaypointToRecorder implements IMessage
         							{
         								ItemWaypointRecorder itemWaypointRecorder = ModItems.getWaypointRecorder();
         								ItemStack heldItem = player.getHeldItemMainhand();
-        								if (heldItem != null && heldItem.getItem() == itemWaypointRecorder)
+        								if (heldItem != null && heldItem.getItem() == itemWaypointRecorder && message.recorderUUID.equals(itemWaypointRecorder.getUUID(heldItem)))
         								{
         									// make sure we aren't trying to add two waypoints to the same spot.        									
         									// if we are, then assume they were *trying* to remove the existing waypoint.
