@@ -5,6 +5,11 @@ import net.minecraftforge.common.util.INBTSerializable;
 
 public class Waypoint implements INBTSerializable<NBTTagCompound> 
 {
+	public static String getCoordinateString(int x, int y, int z)
+	{
+		return "[" + Integer.toString(x) + "x " + Integer.toString(y) + "y " + Integer.toString(z) + "z]";
+	}
+	
 
 	public int x, y, z;
 	
@@ -49,7 +54,7 @@ public class Waypoint implements INBTSerializable<NBTTagCompound>
 	
 	public String getCoordinateString()
 	{
-		return "[" + Integer.toString(x) + "x " + Integer.toString(y) + "y " + Integer.toString(z) + "z]";
+		return getCoordinateString(x,y,z);
 	}
 	
 	@Override

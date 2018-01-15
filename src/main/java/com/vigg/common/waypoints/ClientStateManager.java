@@ -1,14 +1,18 @@
 package com.vigg.common.waypoints;
 
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 import java.util.UUID;
 
 import com.vigg.common.ModItems;
+import com.vigg.common.ModPacketHandler;
+import com.vigg.common.waypoints.IWaypointStorage.WaypointEntry;
+import com.vigg.common.waypoints.ItemWaypointRecorder.RecorderMode;
 
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -35,6 +39,8 @@ public class ClientStateManager
 	@SideOnly(Side.CLIENT)
 	public static Waypoint[] heldRecorderWaypoints = new Waypoint[0];
 	
+	@SideOnly(Side.CLIENT)
+	public static BlockPos targetedPosition = null;
 	
 	
 	@SubscribeEvent	
@@ -47,6 +53,7 @@ public class ClientStateManager
 		ItemWaypointRecorder itemRecorder = ModItems.getWaypointRecorder();
 		EntityPlayerSP player = Minecraft.getMinecraft().player;
 		heldRecorderWaypoints = null;
+		targetedPosition = null;
 		
 		if (player != null)
 		{
@@ -64,6 +71,10 @@ public class ClientStateManager
 					ItemWaypointRecorder.showModeMessage(player, heldItem, ClientStateManager.selectedMode);
 					selectedWaypointIndex = -1;
 				}
+				
+				// update the targeted position
+				if (selectedMode == RecorderMode.ADD_REMOVE || selectedWaypointIndex > -1)
+					targetedPosition = getTargetedPos();
 			}
 			
 			lastTickRecorderUUID = heldItemUUID;
@@ -71,5 +82,43 @@ public class ClientStateManager
 			if (heldRecorderWaypoints == null)
 				heldRecorderWaypoints = new Waypoint[0];
 		}
+	}
+	
+	@SideOnly(Side.CLIENT)
+	private static BlockPos getTargetedPos()
+	{
+		Minecraft mc = Minecraft.getMinecraft();
+		RayTraceResult rayTraceResult = mc.getRenderViewEntity().rayTrace(ItemWaypointRecorder.MAX_WAYPOINT_CLICK_DISTANCE, 1.0F);
+		if (rayTraceResult != null)
+		{
+			BlockPos posClicked = rayTraceResult.getBlockPos();
+			
+			// try a couple different spots, and put the waypoint on the first one that meets the conditions.
+			// if neither spot matches the conditions, then no waypoint is placed, and nothing happens as a result of the player's click.
+			BlockPos[] possibleWaypointPositions = new BlockPos[] {
+					posClicked,					// first try to place at the actual position clicked (example: player clicks on tall grass)
+					posClicked.add(0, 1, 0)		// then try to place above the clicked position (example: player clicks on the ground)
+			};
+			for (BlockPos possiblePos : possibleWaypointPositions)
+			{
+				// don't place waypoints very far above the player, because that's probably an accident and doesn't make sense
+				if (possiblePos != null && possiblePos.getY() <= (mc.player.getPosition().getY() + 1) && possiblePos.getY() > 0)
+				{
+					// don't place waypoints inside of solid blocks
+					IBlockState possiblePosState = mc.world.getBlockState(possiblePos);
+					if (possiblePosState != null && possiblePosState.getMaterial() != null && !possiblePosState.getMaterial().isSolid())
+					{
+						// only place waypoints on top of solid blocks
+						IBlockState blockBelow = mc.player.world.getBlockState(possiblePos.add(0, -1, 0));
+						if (blockBelow != null && blockBelow.getMaterial() != null && blockBelow.getMaterial().isSolid())
+						{
+							return possiblePos;
+						}
+					}
+				}
+			}
+		}
+		
+		return null;
 	}
 }

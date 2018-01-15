@@ -9,13 +9,16 @@ import com.vigg.common.ModBlocks;
 import com.vigg.common.ModItems;
 import com.vigg.common.ModPacketHandler;
 import com.vigg.common.Reference;
+import com.vigg.common.waypoints.IWaypointStorage.WaypointEntry;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -43,7 +46,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	private final static String ITEMSTACK_RECORDER_MODE_TAG_KEY = "com.vigg.wprecorder.mode";
 	private final static String ITEMSTACK_RECORDER_SELECTED_WAYPOINT_INDEX_TAG_KEY = "com.vigg.wprecorder.selectedIndex";
 	
-	private final static double MAX_WAYPOINT_CLICK_DISTANCE = 50D;
+	public final static double MAX_WAYPOINT_CLICK_DISTANCE = 50D;
 	
 	
 	@SideOnly(Side.CLIENT)
@@ -142,29 +145,33 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		{
 			// attempt to add a new waypoint entry
 			
-			// note: to find the block that the player clicked, we could try to use the final calculated position from 
-			// traversing the line-of-sight vector, but in practice that doesn't seem to be as precise as a ray trace,
-			// so let's just burn a few extra client cpu cycles to make sure we know *exactly* where the player clicked
-			RayTraceResult rayTraceResult = Minecraft.getMinecraft().getRenderViewEntity().rayTrace(MAX_WAYPOINT_CLICK_DISTANCE, 1.0F);
-			if (rayTraceResult != null)
+			if (ClientStateManager.targetedPosition != null)
 			{
-				BlockPos posClicked = rayTraceResult.getBlockPos();
-				if (posClicked != null)
+				// make sure we aren't trying to add two waypoints to the same spot.        									
+				// if we are, then assume the player intended to remove the existing waypoint.
+				
+				WaypointEntry existingWaypoint = getWaypoint(recorder, ClientStateManager.targetedPosition.getX(), ClientStateManager.targetedPosition.getY(), ClientStateManager.targetedPosition.getZ());
+				if (existingWaypoint == null)
 				{
+					// attempt to add the new waypoint
 					ModPacketHandler.INSTANCE.sendToServer(new MessageAddWaypointToRecorder(
 							ModItems.getWaypointRecorder().getUUID(playerIn.getHeldItem(handIn)), 
-							posClicked.getX(),
-							posClicked.getY(),
-							posClicked.getZ()
+							ClientStateManager.targetedPosition.getX(),
+							ClientStateManager.targetedPosition.getY(),
+							ClientStateManager.targetedPosition.getZ()
 					));
 				}
+				else
+				{
+					// set clickedWaypointEntry so that the existing waypoint will be removed by the code below
+					clickedWaypointEntry = existingWaypoint;
+				}	
 			}
-			
 		}
-		else
+
+		if (clickedWaypointEntry != null)
 		{
 			// attempt to remove the waypoint that the player clicked on
-			
 			ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), clickedWaypointEntry));
 		}
 	}
@@ -179,7 +186,22 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 
 		if (clickedWaypointEntry == null)
 		{
-			
+			if (ClientStateManager.selectedWaypointIndex > -1 && ClientStateManager.targetedPosition != null && ClientStateManager.selectedWaypointIndex < ClientStateManager.heldRecorderWaypoints.length)
+			{
+				// move the selected waypoint to the targeted position
+				
+				WaypointEntry selectedWaypointEntry = new WaypointEntry(
+						ClientStateManager.selectedWaypointIndex, 
+						ClientStateManager.heldRecorderWaypoints[ClientStateManager.selectedWaypointIndex]
+				);
+				
+				selectedWaypointEntry.waypoint.x = ClientStateManager.targetedPosition.getX();
+				selectedWaypointEntry.waypoint.y = ClientStateManager.targetedPosition.getY();
+				selectedWaypointEntry.waypoint.z = ClientStateManager.targetedPosition.getZ();
+				
+				ModPacketHandler.INSTANCE.sendToServer(new MessageUpdateWaypointOnRecorder(getUUID(recorder), selectedWaypointEntry));
+				ClientStateManager.selectedWaypointIndex = -1;
+			}
 		}
 		else
 		{
@@ -327,7 +349,8 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 
 
 	@Override
-	public void onUpdate(ItemStack stack, World worldIn, Entity entityIn, int itemSlot, boolean isSelected) {
+	public void onUpdate(ItemStack stack, World worldIn, Entity entityIn, int itemSlot, boolean isSelected) 
+	{
 		super.onUpdate(stack, worldIn, entityIn, itemSlot, isSelected);
 		
 		if (worldIn.isRemote)
@@ -340,25 +363,17 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 				// Make sure the BlockWaypoint is spawned for each current waypoint.
 				// Since these waypoint blocks are 100% just-for-looks and do not interact with anything in the world,
 				// I'm gonna go against common wisdom and create them *only* on the client side.
+				UUID recorderID = getUUID(stack);
 				for (int i = 0; i < ClientStateManager.heldRecorderWaypoints.length; i++)
 				{
 					Waypoint wp = ClientStateManager.heldRecorderWaypoints[i];
-					BlockPos pos = new BlockPos(wp.x, wp.y, wp.z);
-					IBlockState waypointState = ModBlocks.getBlockWaypoint().getDefaultState();
-					
-					IBlockState originalState = worldIn.getBlockState(pos);
-					TileEntity originalEntity = worldIn.getTileEntity(pos);
-					if (originalState != waypointState && originalEntity == null) // don't destroy other TileEntities to show the waypoint, since that could potentially cause freaky client-side bugs/crashes
-					{
-						worldIn.setBlockState(pos, waypointState);
-						
-						// initialize the TileEntityWaypoint
-						TileEntity te = worldIn.getTileEntity(pos);
-						if (te instanceof TileEntityWaypoint)
-						{
-							((TileEntityWaypoint)te).initWaypoint(getUUID(stack), (EntityPlayer)entityIn, originalState);
-						}
-					}
+					spawnWaypointTileEntity(recorderID, new BlockPos(wp.x, wp.y, wp.z), true);
+				}
+				
+				// also show a waypoint tile entity on the space the player is currently targeting
+				if (ClientStateManager.targetedPosition != null)
+				{
+					spawnWaypointTileEntity(recorderID, ClientStateManager.targetedPosition, true);
 				}
 			}
 		}
@@ -370,6 +385,31 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		}
 	}
     
+	@SideOnly(Side.CLIENT)
+	private void spawnWaypointTileEntity(UUID recorderID, BlockPos pos, boolean showNameplate)
+	{
+		Minecraft mc = Minecraft.getMinecraft();
+		IBlockState waypointState = ModBlocks.getBlockWaypoint().getDefaultState();
+		
+		IBlockState originalState = mc.world.getBlockState(pos);
+		if (originalState != waypointState)
+		{
+			TileEntity originalEntity = mc.world.getTileEntity(pos);
+			NBTTagCompound originalEntityState = null;
+			if (originalEntity != null)
+				originalEntityState = originalEntity.serializeNBT();
+			
+			mc.world.setBlockState(pos, waypointState);
+			
+			// initialize the TileEntityWaypoint
+			TileEntity te = mc.world.getTileEntity(pos);
+			if (te instanceof TileEntityWaypoint)
+			{
+				((TileEntityWaypoint)te).initWaypoint(recorderID, mc.player, originalState, originalEntityState, showNameplate);
+			}
+		}
+	}
+	
     @Override
 	public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) 
     {

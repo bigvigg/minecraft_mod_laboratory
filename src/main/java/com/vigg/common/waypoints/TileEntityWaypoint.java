@@ -7,6 +7,7 @@ import java.util.UUID;
 import com.google.common.collect.Lists;
 import com.vigg.common.ModItems;
 import com.vigg.common.waypoints.IWaypointStorage.WaypointEntry;
+import com.vigg.common.waypoints.ItemWaypointRecorder.RecorderMode;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
@@ -29,10 +30,14 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
 {
 	public static final String NBT_KEY = "com.vigg.TileEntityWaypoint";
 	
+	public boolean showNameplate = true;
+	
 	private UUID recorderUUID = null;
 	private EntityPlayer player = null;
 	private IBlockState originalState = null;
+	private NBTTagCompound originalEntityState = null;
 	private EnumDyeColor beamColor = EnumDyeColor.WHITE;
+	
 	
     // properties copied from TileEntityBeacon:
     private final List<TileEntityWaypoint.BeamSegment> beamSegments = Lists.<TileEntityWaypoint.BeamSegment>newArrayList();
@@ -43,11 +48,13 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
     private String customName;
     
 	
-	public void initWaypoint(UUID parRecorderUUID, EntityPlayer parPlayer, IBlockState parOriginalState)
+	public void initWaypoint(UUID parRecorderUUID, EntityPlayer parPlayer, IBlockState parOriginalState, NBTTagCompound parOriginalEntityState, boolean parShowNameplate)
 	{
 		recorderUUID = parRecorderUUID;
 		player = parPlayer;
 		originalState = parOriginalState;
+		originalEntityState = parOriginalEntityState;
+		showNameplate = parShowNameplate;
 		
 		updateBeacon();
 	}
@@ -112,7 +119,27 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
 					}
 					
 					if (waypointEntry == null)
-						selfDestruct();
+					{
+						if (ClientStateManager.targetedPosition != null && ClientStateManager.targetedPosition.equals(this.pos))
+						{
+							// this TileEntity is for the targeting cursor, and is not actually attached to an existing waypoint
+							if (ClientStateManager.selectedMode == RecorderMode.ADD_REMOVE)
+								this.beamColor = EnumDyeColor.WHITE;
+							else
+								this.beamColor = EnumDyeColor.LIME;
+							
+							this.setName(Waypoint.getCoordinateString(
+									ClientStateManager.targetedPosition.getX(),
+									ClientStateManager.targetedPosition.getY(),
+									ClientStateManager.targetedPosition.getZ()
+							));
+							this.updateBeacon();
+						}
+						else
+						{
+							selfDestruct();
+						}
+					}
 					else
 					{
 						// update beacon display with latest waypoint data
@@ -242,7 +269,16 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
 		//System.out.println("STUB self-destruct");
 		
 		if (originalState != null)
+		{
 			world.setBlockState(pos, originalState);
+			
+			if (originalEntityState != null)
+			{
+				TileEntity te = world.getTileEntity(pos);
+				if (te != null)
+					te.deserializeNBT(originalEntityState);
+			}
+		}
 		else
 			world.setBlockState(pos, Blocks.AIR.getDefaultState());
 	}

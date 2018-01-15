@@ -38,8 +38,9 @@ public class TileEntityWaypointRenderer extends TileEntitySpecialRenderer<TileEn
         this.renderBeacon(x, y, z, (double)partialTicks, 1f, te.getBeamSegments(), (double)te.getWorld().getTotalWorldTime());
         
         RenderManager rm = mc.getRenderManager();
-        //EntityRenderer.drawNameplate(mc.fontRenderer, "stub wp label", (float)x, (float)y, (float)z, -60, rm.playerViewY, rm.playerViewX, (rm.options.thirdPersonView == 2), false);
-        this.drawNameplate(te, te.getName(), x, y, z, 100);
+
+        if (te.showNameplate)
+        	this.drawNameplate(te, te.getName(), x, y, z, 100);
     }
 
     public void renderBeacon(double x, double y, double z, double partialTicks, double textureScale, List<TileEntityWaypoint.BeamSegment> beamSegments, double totalWorldTime)
