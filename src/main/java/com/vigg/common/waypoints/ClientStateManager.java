@@ -11,6 +11,7 @@ import com.vigg.common.waypoints.ItemWaypointRecorder.RecorderMode;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
@@ -48,6 +49,10 @@ public class ClientStateManager
 	@SideOnly(Side.CLIENT)
 	public static WaypointEntry targetedWaypoint = null;
 	
+	private void stub()
+	{
+		
+	}
 	
 	@SubscribeEvent	
 	@SideOnly(Side.CLIENT)
@@ -58,29 +63,30 @@ public class ClientStateManager
 		
 		ItemWaypointRecorder itemRecorder = ModItems.getWaypointRecorder();
 		EntityPlayerSP player = Minecraft.getMinecraft().player;
+		
+		lastTickRecorderUUID = null;
 		heldRecorderWaypoints = null;
-		targetedPosition = null;
 		targetedWaypoint = null;
+		targetedPosition = null;
 		
 		if (player != null)
 		{
 			ItemStack heldItem = player.getHeldItemMainhand();
-			UUID heldItemUUID = null;
 			
 			if (heldItem != null && heldItem.getItem() == itemRecorder)
 			{
-				heldItemUUID = itemRecorder.getUUID(heldItem);
+				lastTickRecorderUUID = itemRecorder.getUUID(heldItem);
 				heldRecorderWaypoints = itemRecorder.getWaypoints(heldItem);
-
-				// show the mode message when the player selects a recorder in their hand
-				if (heldItemUUID != null && (lastTickRecorderUUID == null || !heldItemUUID.equals(lastTickRecorderUUID)))
+				targetedWaypoint = getTargetedWaypoint();
+				
+				// show message and reset selected waypoint when the player selects a recorder in their hand
+				if (lastTickRecorderUUID != null && (lastTickRecorderUUID == null || !lastTickRecorderUUID.equals(lastTickRecorderUUID)))
 				{
 					ItemWaypointRecorder.showModeMessage(player, heldItem, ClientStateManager.selectedMode);
 					selectedWaypointIndex = -1;
 				}
 				
-				targetedWaypoint = getTargetedWaypoint();
-				
+				// set targetedPosition
 				if (selectedMode == RecorderMode.ADD_REMOVE || selectedWaypointIndex > -1)
 				{
 					// if we're looking at a waypoint beacon, then pretend we have that waypoint's position targeted
@@ -89,11 +95,9 @@ public class ClientStateManager
 					else
 						targetedPosition = getTargetedPos();
 				}
-					
 			}
 			
-			lastTickRecorderUUID = heldItemUUID;
-			
+			// just so other code doesn't have to bother checking for null before looping
 			if (heldRecorderWaypoints == null)
 				heldRecorderWaypoints = new Waypoint[0];
 		}
