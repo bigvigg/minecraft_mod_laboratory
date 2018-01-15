@@ -1,6 +1,7 @@
 package com.vigg.common.waypoints;
 
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.common.util.INBTSerializable;
 
 public class Waypoint implements INBTSerializable<NBTTagCompound> 
@@ -94,5 +95,20 @@ public class Waypoint implements INBTSerializable<NBTTagCompound>
 		}
 		else
 			return super.equals(obj);
+	}
+	
+	public BlockPos getBlockPos()
+	{
+		return new BlockPos(this.x, this.y, this.z);
+	}
+	
+	public boolean isAt(int parX, int parY, int parZ)
+	{
+		return (this.x == parX && this.y == parY && this.z == parZ);
+	}
+	
+	public boolean isAt(BlockPos parPos)
+	{
+		return (this.x == parPos.getX() && this.y == parPos.getY() && this.z == parPos.getZ());
 	}
 }

@@ -145,12 +145,22 @@ public class TileEntityWaypoint extends TileEntity implements ITickable
 						// update beacon display with latest waypoint data
 						
 						String newName = "#" + Integer.toString(waypointEntry.index + 1) + " " + waypointEntry.waypoint.getLabel();
-						
-						if (waypointEntry.index == ClientStateManager.selectedWaypointIndex && ClientStateManager.selectedMode == ItemWaypointRecorder.RecorderMode.EDIT)
-							this.beamColor = EnumDyeColor.LIME;
+
+						if (ClientStateManager.selectedMode == ItemWaypointRecorder.RecorderMode.EDIT)
+						{
+							if (waypointEntry.index == ClientStateManager.selectedWaypointIndex || (ClientStateManager.targetedWaypoint != null && ClientStateManager.targetedWaypoint.index == waypointEntry.index))
+								this.beamColor = EnumDyeColor.LIME;
+							else
+								this.beamColor = EnumDyeColor.WHITE;
+						}
 						else
-							this.beamColor = EnumDyeColor.WHITE;
-								
+						{
+							if (ClientStateManager.targetedWaypoint != null && ClientStateManager.targetedWaypoint.index == waypointEntry.index)
+								this.beamColor = EnumDyeColor.RED;
+							else
+								this.beamColor = EnumDyeColor.WHITE;
+						}
+						
 						this.setName(newName);
 						this.updateBeacon();
 					}

@@ -139,9 +139,8 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	private void handleRightClick_AddRemoveMode(World worldIn, EntityPlayer playerIn, EnumHand handIn)
 	{
 		ItemStack recorder = playerIn.getHeldItem(handIn);
-		WaypointEntry clickedWaypointEntry = getTargetedWaypoint(playerIn);
 
-		if (clickedWaypointEntry == null)
+		if (ClientStateManager.targetedWaypoint == null)
 		{
 			// attempt to add a new waypoint entry
 			
@@ -163,28 +162,26 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 				}
 				else
 				{
-					// set clickedWaypointEntry so that the existing waypoint will be removed by the code below
-					clickedWaypointEntry = existingWaypoint;
+					// correct ClientStateManager.targetedWaypoint so that the existing waypoint will be removed by the code below
+					// (this really should never happen - this is a catch-all in case ClientStateManager.targetedWaypoint is null when it shouldn't be due to a bug)
+					ClientStateManager.targetedWaypoint = existingWaypoint;
 				}	
 			}
 		}
 
-		if (clickedWaypointEntry != null)
+		if (ClientStateManager.targetedWaypoint != null)
 		{
 			// attempt to remove the waypoint that the player clicked on
-			ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), clickedWaypointEntry));
+			ModPacketHandler.INSTANCE.sendToServer(new MessageRemoveWaypointFromRecorder(getUUID(recorder), ClientStateManager.targetedWaypoint));
 		}
 	}
 
 	@SideOnly(Side.CLIENT)
 	private void handleRightClick_EditMode(World worldIn, EntityPlayer playerIn, EnumHand handIn)
 	{
-		// remember - the selected waypoint purely client side, and the nbt tag never gets set on the server
-		
 		ItemStack recorder = playerIn.getHeldItem(handIn);
-		WaypointEntry clickedWaypointEntry = getTargetedWaypoint(playerIn);
 
-		if (clickedWaypointEntry == null)
+		if (ClientStateManager.targetedWaypoint == null)
 		{
 			if (ClientStateManager.selectedWaypointIndex > -1 && ClientStateManager.targetedPosition != null && ClientStateManager.selectedWaypointIndex < ClientStateManager.heldRecorderWaypoints.length)
 			{
@@ -206,13 +203,17 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		else
 		{
 			if (ClientStateManager.selectedWaypointIndex == -1)
-				ClientStateManager.selectedWaypointIndex = clickedWaypointEntry.index; // select the clicked waypoint
-			else if (ClientStateManager.selectedWaypointIndex == clickedWaypointEntry.index)
+				ClientStateManager.selectedWaypointIndex = ClientStateManager.targetedWaypoint.index; // select the clicked waypoint
+			else if (ClientStateManager.selectedWaypointIndex == ClientStateManager.targetedWaypoint.index)
 				ClientStateManager.selectedWaypointIndex = -1; // clicked on same waypoint twice: deselect it
 			else
 			{
 				// swap the two waypoints
-				ModPacketHandler.INSTANCE.sendToServer(new MessageSwapWaypointsOnRecorder(getUUID(recorder), ClientStateManager.selectedWaypointIndex, clickedWaypointEntry.index));
+				ModPacketHandler.INSTANCE.sendToServer(new MessageSwapWaypointsOnRecorder(
+						getUUID(recorder), 
+						ClientStateManager.selectedWaypointIndex, 
+						ClientStateManager.targetedWaypoint.index)
+				);
 				ClientStateManager.selectedWaypointIndex = -1;
 			}
 		}
@@ -232,93 +233,7 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 	*/
 
 
-	@SideOnly(Side.CLIENT)
-	private WaypointEntry getTargetedWaypoint(EntityPlayer playerIn)
-	{
-		// traverse down the player's current line of sight, evaluating each block along the way until one of 3 things happens:
-		//	1. we find a solid block, in which case we'll attempt to add a new waypoint at that spot
-		//	2. we find a block above an existing waypoint, in which case we'll remove that waypoint
-		//	3. we reach the limit defined by MAX_WAYPOINT_CLICK_DISTANCE without either 1 or 2 happening,
-		//	   in which case we attempt to add a waypoint there at the distance limit
-		
-		WaypointEntry clickedWaypointEntry = null;
-		ItemStack recorder = playerIn.getHeldItemMainhand();
-		Vec3d lookVec = playerIn.getLookVec();
-		Vec3d positionVec = playerIn.getPositionVector().addVector(0, 1, 0);			
-		BlockPos lastLineOfSightPos = null;
-		
-		// distanceCounterIncrementer: how much unevaluated space to leave between the points that we're about to evaluate along the player's line of sight.
-		// - A value of 1.0D will leave exactly one block of unevaluated space in between each evaluated point.  
-		//   0.5D will leave exactly half a block of unevaluated space between each point.  Etc.
-		// - A smaller value will make it less likely to skip over blocks when the player's line of sight crosses
-		//   the corners where blocks intersect, BUT it will also mean more trips through the loop (which can be mostly mitigated by checking lastLineOfSightPos)
-		double distanceCounterIncrementer = 0.2D;
-		
-		lineOfSightLoop:
-		for (double distanceCounter = 0D; distanceCounter < MAX_WAYPOINT_CLICK_DISTANCE; distanceCounter += 0.2D)
-		{
-			BlockPos nextLineOfSightPos = new BlockPos(positionVec.add(lookVec.scale(distanceCounter)));
-			
-			// don't waste time evaluating the same position twice (which will happen if the distanceCounterIncrementer above is less than 1.0D, for greater accuracy)
-			if (lastLineOfSightPos != null && lastLineOfSightPos.equals(nextLineOfSightPos))
-				continue;
-			
-			IBlockState nextLineOfSightBlock = playerIn.world.getBlockState(nextLineOfSightPos);
-			
-			// see if any waypoints are below this next block in the player's line of sight
-			for (int waypointIndex = 0; waypointIndex < ClientStateManager.heldRecorderWaypoints.length; waypointIndex++)
-			{
-				Waypoint nextWaypoint = ClientStateManager.heldRecorderWaypoints[waypointIndex];
-
-				//System.out.println("** STUB - " + nextLineOfSightPos.toString() + " vs " + nextWaypoint.getCoordinateString());
-				
-				if (nextWaypoint.x == nextLineOfSightPos.getX() && nextWaypoint.z == nextLineOfSightPos.getZ()/* && nextWaypoint.y <= nextLineOfSightPos.getY()*/)
-				{
-					// Player's line of sight has crossed somewhere above, below, or directly through an existing waypoint.
-
-					// See if there are any solid blocks between player's line of sight and the waypoint
-					// (e.g. if the player is on the top floor of a house, and the waypoint is on the bottom floor).
-					// If there is no solid block between the player's line of sight and the waypoint,
-					// then assume that the player was intentionally attempting to click on that waypoint's visible beacon.
-					
-					// hacky workaround for situation where player's line of site goes directly UNDER the waypoint, and through
-					// the solid block below it (this happens a lot)
-					int searchDownStartY = nextLineOfSightPos.getY();
-					if (nextWaypoint.y <= positionVec.y)
-						searchDownStartY += 1;
-					
-					for (int searchDownCounter = searchDownStartY; searchDownCounter >= nextWaypoint.y; searchDownCounter--)
-					{
-						BlockPos nextBlockPos = new BlockPos(nextLineOfSightPos.getX(), searchDownCounter, nextLineOfSightPos.getZ());
-						IBlockState nextBlockDownState = playerIn.world.getBlockState(nextBlockPos);
-						if (nextBlockDownState.getBlock() == ModBlocks.getBlockWaypoint())
-						{
-							// we found the waypoint
-							clickedWaypointEntry = new WaypointEntry(waypointIndex, nextWaypoint);
-							break lineOfSightLoop;
-						}
-						else if (nextBlockDownState.getMaterial().isSolid())
-						{
-							// We hit a solid block, so the player probably *wasn't* trying to click this waypoint after all.
-							break lineOfSightLoop;
-						}
-					}						
-					// note: it *should* be impossible for code to reach this point, where it never found the waypoint
-				}
-			} // end waypoint loop
-			
-			if (nextLineOfSightBlock.getMaterial().isSolid())
-			{
-				// we hit a solid block.
-				// the next code block after lineOfSightLoop will attempt to add a new waypoint at nextLineOfSightPos current position
-				break lineOfSightLoop; 
-			}
-			
-			lastLineOfSightPos = nextLineOfSightPos;
-		} // end lineOfSightLoop
-		
-		return clickedWaypointEntry;
-	}
+	
 	
 	@Override
 	public boolean onLeftClickEntity(ItemStack stack, EntityPlayer player, Entity entity) 
