@@ -4,15 +4,13 @@ import java.util.UUID;
 
 import com.vigg.common.ModBlocks;
 import com.vigg.common.ModItems;
-import com.vigg.common.ModPacketHandler;
 import com.vigg.common.waypoints.IWaypointStorage.WaypointEntry;
 import com.vigg.common.waypoints.ItemWaypointRecorder.RecorderMode;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
-import net.minecraft.entity.EntityLiving;
-import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.ai.EntityAIBase;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
@@ -49,10 +47,6 @@ public class ClientStateManager
 	@SideOnly(Side.CLIENT)
 	public static WaypointEntry targetedWaypoint = null;
 	
-	private void stub()
-	{
-		
-	}
 	
 	@SubscribeEvent	
 	@SideOnly(Side.CLIENT)
