@@ -19,6 +19,13 @@ Item.getNBTShareTag()
             + can use magic tools/weapons
         - zombie
             + can respawn with inventory by default
+        - mini-zombies
+            + unique ai task: pickpocket (have it run around outside at night stealing items from random mobs that spawn)
+        - enderman
+            + unique ai task: place blocks
+                - work same as factorio construction bots.  take blueprint of existing blocks on a blueprint recorder
+                  item, which can then place a ghost of the blueprinted item in world.  the unique task will make
+                  endermen place blocks from its inventory to satisfy any placed blueprint within its range.
             
     - make it so that charmed mobs can respawn at a set spawn point after death, with the inventories they had when they died.  this is the only
       feasible way i can think of to make it so that charmed mobs could be used for mining.  would also be useful for charmed mobs with other
@@ -27,7 +34,19 @@ Item.getNBTShareTag()
         - additional cost to make the mob keep its inventory instead of dropping it where it died
         - maybe zombies can get this ability for free to offset their shitty stats and make them feasible as early game miners
               
-- next to do:
+              
+  ai code structure:
+    * (good place to start might be creating and testing the new EntityAIBase class to make them traverse waypoints)
+    
+    - any entity ai task which happens to implement IConfigurableAITask (or w/e it's named) will get an additional
+      section rendered in the UI where its configurations can be set
+        + the first method in IConfigurableAITask should return a custom gui panel made specifically for that task subclass
+        + figure out a clean mechanism for task configurations to be saved permanently in the nbt tag somewhere
+    - any entity ai task which does NOT implement the interface (i.e. vanilla ai tasks) is still handled the same way
+      by the ui - just without the custom config panel
+    
+    
+- to do:
     
     - add property to Waypoint to track what world it's in
         + add validation to server to make sure all waypoints are in same world when adding a new waypoint

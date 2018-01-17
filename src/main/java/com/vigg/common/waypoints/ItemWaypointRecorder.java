@@ -17,6 +17,7 @@ import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
@@ -92,6 +93,16 @@ public class ItemWaypointRecorder extends Item implements IWaypointStorage<ItemS
 		// TODO Auto-generated method stub
 		return super.onItemUse(player, worldIn, pos, hand, facing, hitX, hitY, hitZ);
 	}
+
+
+	@Override
+	public boolean onEntitySwing(EntityLivingBase entityLiving, ItemStack stack) {
+		System.out.println("STUB onEntitySwing");
+		
+		return true;
+		//return super.onEntitySwing(entityLiving, stack);
+	}
+
 
 
 	@Override

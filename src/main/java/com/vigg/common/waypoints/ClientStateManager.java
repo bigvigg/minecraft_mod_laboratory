@@ -58,7 +58,6 @@ public class ClientStateManager
 		ItemWaypointRecorder itemRecorder = ModItems.getWaypointRecorder();
 		EntityPlayerSP player = Minecraft.getMinecraft().player;
 		
-		lastTickRecorderUUID = null;
 		heldRecorderWaypoints = null;
 		targetedWaypoint = null;
 		targetedPosition = null;
@@ -69,12 +68,11 @@ public class ClientStateManager
 			
 			if (heldItem != null && heldItem.getItem() == itemRecorder)
 			{
-				lastTickRecorderUUID = itemRecorder.getUUID(heldItem);
 				heldRecorderWaypoints = itemRecorder.getWaypoints(heldItem);
 				targetedWaypoint = getTargetedWaypoint();
 				
 				// show message and reset selected waypoint when the player selects a recorder in their hand
-				if (lastTickRecorderUUID != null && (lastTickRecorderUUID == null || !lastTickRecorderUUID.equals(lastTickRecorderUUID)))
+				if (lastTickRecorderUUID == null || !lastTickRecorderUUID.equals(lastTickRecorderUUID))
 				{
 					ItemWaypointRecorder.showModeMessage(player, heldItem, ClientStateManager.selectedMode);
 					selectedWaypointIndex = -1;
@@ -89,12 +87,18 @@ public class ClientStateManager
 					else
 						targetedPosition = getTargetedPos();
 				}
+				
+				lastTickRecorderUUID = itemRecorder.getUUID(heldItem);
 			}
+			else
+				lastTickRecorderUUID = null;
 			
 			// just so other code doesn't have to bother checking for null before looping
 			if (heldRecorderWaypoints == null)
 				heldRecorderWaypoints = new Waypoint[0];
 		}
+		else
+			lastTickRecorderUUID = null;
 	}
 	
 	@SideOnly(Side.CLIENT)
